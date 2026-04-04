@@ -25,7 +25,7 @@ const hasNotif = ref(true)
   );
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  padding: 16px 24px 18px;
+  padding: 28px 24px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -35,7 +35,7 @@ const hasNotif = ref(true)
   box-shadow: 0 1px 0 rgba(160, 175, 230, 0.25),
               0 4px 16px rgba(160, 175, 230, 0.08);
 }
-.header-title    { font-size: 30px; font-weight: 700; color: #1a1a3e; letter-spacing: -.5px; line-height: 1.15; }
+.header-title    { font-size: 27px; font-weight: 700; color: #1a1a3e; letter-spacing: -.5px; line-height: 1.15; }
 .header-location { font-size: 12px; color: #9BA3C0; font-weight: 500; margin-top: 4px; }
 .notif-btn {
   background: none; border: none; cursor: pointer;
