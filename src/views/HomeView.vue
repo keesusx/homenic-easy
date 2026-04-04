@@ -512,8 +512,8 @@ async function sendChat() {
   height: 44px;
 }
 
-.menu-title { font-size: 15px; font-weight: 700; color: #1a1a3e; line-height: 1.3; }
-.menu-sub   { font-size: 12px; color: #9BA3C0; font-weight: 500; }
+.menu-title { font-size: 17px; font-weight: 700; color: #1a1a3e; line-height: 1.3; }
+.menu-sub   { font-size: 12px; color: #9BA3C0; font-weight: 400; }
 .menu-card.active .menu-title { color: #fff; }
 .menu-card.active .menu-sub   { color: rgba(255,255,255,.45); }
 

@@ -18,31 +18,39 @@ const hasNotif = ref(true)
 
 <style scoped>
 .header {
-  background: transparent;
-  padding: 18px 20px 16px;
+  background: linear-gradient(
+    180deg,
+    rgba(238, 242, 255, 0.94) 0%,
+    rgba(232, 237, 252, 0.88) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 16px 24px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: sticky;
   top: 0;
   z-index: 50;
+  box-shadow: 0 1px 0 rgba(160, 175, 230, 0.25),
+              0 4px 16px rgba(160, 175, 230, 0.08);
 }
-.header-title    { font-size: 20px; font-weight: 800; color: #111; letter-spacing: -.3px; line-height: 1.2; }
-.header-location { font-size: 12px; color: #aaa; font-weight: 500; margin-top: 3px; }
+.header-title    { font-size: 30px; font-weight: 700; color: #1a1a3e; letter-spacing: -.5px; line-height: 1.15; }
+.header-location { font-size: 12px; color: #9BA3C0; font-weight: 500; margin-top: 4px; }
 .notif-btn {
   background: none; border: none; cursor: pointer;
-  color: #111; padding: 4px 6px;
+  padding: 4px 6px;
   position: relative;
   display: flex; align-items: center; justify-content: center;
   min-width: 44px; min-height: 44px;
 }
 .notif-label {
-  font-size: 15px; font-weight: 600; color: #111;
+  font-size: 15px; font-weight: 600; color: #1a1a3e;
 }
 .notif-dot {
   width: 7px; height: 7px;
   background: #ef4444; border-radius: 50%;
   position: absolute; top: 6px; right: 4px;
-  border: 1.5px solid #fff;
+  border: 1.5px solid transparent;
 }
 </style>
