@@ -41,6 +41,15 @@ defineProps({ name: { type: String, required: true } })
       <path d="M14 26h24" stroke="currentColor" stroke-width="1.8"/>
     </template>
 
+    <!-- 관리비: 지갑/영수증 -->
+    <template v-else-if="name === 'fee'">
+      <rect x="6" y="14" width="40" height="28" rx="4" stroke="currentColor" stroke-width="2.2"/>
+      <path d="M6 22h40" stroke="currentColor" stroke-width="2.2"/>
+      <path d="M14 31h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M14 36h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="36" cy="31" r="4" stroke="currentColor" stroke-width="2"/>
+    </template>
+
     <!-- 모두챗: 말풍선 두 개 -->
     <template v-else-if="name === 'chat'">
       <path d="M5 10h25a3 3 0 0 1 3 3v13a3 3 0 0 1-3 3H15l-7 5v-5H5a3 3 0 0 1-3-3V13a3 3 0 0 1 3-3z"

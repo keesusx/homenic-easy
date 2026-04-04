@@ -46,7 +46,7 @@ html, body {
   transition: filter .15s, transform .1s;
 }
 .btn:active        { transform: scale(.97); }
-.btn-primary       { background: #2F3DB8; color: #fff; }
+.btn-primary       { background: #34449C; color: #fff; }
 .btn-primary:hover { filter: brightness(1.15); }
 .btn-full          { width: 100%; }
 .btn-outline {
@@ -96,7 +96,7 @@ html, body {
   transition: transform .25s;
   box-shadow: 0 1px 3px rgba(0,0,0,.15);
 }
-.switch input:checked + .slider            { background: #2F3DB8; }
+.switch input:checked + .slider            { background: #34449C; }
 .switch input:checked + .slider::before   { transform: translateX(22px); }
 .switch input:disabled + .slider          { opacity: .45; cursor: not-allowed; }
 

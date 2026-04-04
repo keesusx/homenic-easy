@@ -17,6 +17,7 @@ const cards = reactive([
   { key: 'booking', title: '시설 예약', sub: '커뮤니티 예약' },
   { key: 'notice',  title: '공지사항',  sub: '아파트 공지' },
   { key: 'car',     title: '방문차량',  sub: '차량 등록' },
+  { key: 'fee',     title: '관리비',   sub: '이번달 납부 현황' },
   { key: 'chat',    title: '모두챗',   sub: '입주민 채팅' },
 ])
 
@@ -137,8 +138,45 @@ function onIotToggle(d) {
 }
 
 // ── 2. 시설 예약 ─────────────────────────────────────────────
-const facilities  = ['헬스장', '수영장', '골프장', 'BBQ장', '독서실']
+const facilities = reactive([
+  { name: '헬스장', expiry: '2026-04-30' },
+  { name: '수영장', expiry: '2026-04-08' },
+  { name: '골프장', expiry: null },
+  { name: 'BBQ장',  expiry: null },
+  { name: '독서실', expiry: '2026-04-10' },
+])
+
+function hasPass(fac) {
+  if (!fac.expiry) return false
+  return new Date(fac.expiry) >= new Date(new Date().toDateString())
+}
+
+function daysLeft(fac) {
+  if (!fac.expiry) return 0
+  const diff = new Date(fac.expiry) - new Date(new Date().toDateString())
+  return Math.max(0, Math.ceil(diff / 86400000))
+}
+
+const expiringFacilities = computed(() =>
+  facilities.filter(f => hasPass(f) && daysLeft(f) <= 7)
+)
+
 const selFacility = ref('헬스장')
+const ticketAlert = ref(null)
+
+function selectFacility(fac) {
+  if (!hasPass(fac)) {
+    ticketAlert.value = fac.name
+    return
+  }
+  ticketAlert.value = null
+  selFacility.value = fac.name
+  selSlot.value = null
+}
+
+function dismissTicketAlert() {
+  ticketAlert.value = null
+}
 const selDate     = ref(null)
 const selSlot     = ref(null)
 const slotSeed    = reactive({})
@@ -146,12 +184,14 @@ const rawSlots    = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16
 
 // 시설별 휴관 요일 (0=일, 1=월, ..., 6=토)
 const facilityClosedDays = {
-  '헬스장': [1],        // 월요일 휴관
-  '수영장': [1, 2],     // 월·화 휴관
-  '골프장': [0, 1],     // 일·월 휴관
-  'BBQ장':  [1, 2, 3, 4, 5], // 주말만 운영
-  '독서실': [0],        // 일요일 휴관
+  '헬스장': [1],
+  '수영장': [1, 2],
+  '골프장': [0, 1],
+  'BBQ장':  [1, 2, 3, 4, 5],
+  '독서실': [0],
 }
+
+const OFFICE_PHONE = 'tel:021234567'
 
 // 향후 14일 날짜 목록 (시설별 활성 여부 포함)
 const DAYS_KO = ['일','월','화','수','목','금','토']
@@ -215,7 +255,28 @@ const notices = reactive([
   { id:4, tag:'일반', tc:'gen',    title:'재활용 분리수거 요일 변경 안내',       date:'03.20', body:'4월부터 분리수거 요일이 화·목·토로 변경됩니다.', open:false },
 ])
 
-// ── 4. 방문차량 ───────────────────────────────────────────────
+// ── 4. 관리비 ─────────────────────────────────────────────────
+const fee = reactive({
+  month: '2026년 4월',
+  total: 287500,
+  dueDate: '4월 25일(금)',
+  paid: false,
+  items: [
+    { label: '일반관리비', amount: 45000 },
+    { label: '청소비',     amount: 32000 },
+    { label: '경비비',     amount: 58000 },
+    { label: '승강기유지비', amount: 12000 },
+    { label: '수선유지비', amount: 28000 },
+    { label: '전기료',     amount: 67500 },
+    { label: '수도료',     amount: 25000 },
+    { label: '난방비',     amount: 20000 },
+  ],
+})
+function formatKRW(n) {
+  return n.toLocaleString('ko-KR') + '원'
+}
+
+// ── 5. 방문차량 ───────────────────────────────────────────────
 const car = reactive({ plate: '', datetime: '', purpose: '' })
 function submitCar() {
   if (!car.plate.trim()) { showToast('차량번호를 입력해 주세요.'); return }
@@ -228,9 +289,10 @@ function submitCar() {
 const chatWrap  = ref(null)
 const chatInput = ref('')
 const messages  = reactive([
-  { id:1, me:false, sender:'관리사무소',      text:'안녕하세요! 무엇이든 문의해 주세요.', time:'09:00' },
-  { id:2, me:false, sender:'김이웃 (203호)', text:'내일 BBQ장 사용 가능한가요?',        time:'09:05' },
-  { id:3, me:false, sender:'관리사무소',      text:'네, 오후 2시 이후 예약 가능합니다.', time:'09:06' },
+  { id:1, me:false, sender:'박이웃 (301호)', text:'혹시 어제 엘리베이터에 우산 두고 가신 분 계세요? 경비실에 맡겨뒀어요 😊', time:'08:42' },
+  { id:2, me:false, sender:'김이웃 (502호)', text:'아 저예요! 감사합니다 ㅠㅠ', time:'08:45' },
+  { id:3, me:false, sender:'이이웃 (401호)', text:'내일 지하주차장 A구역 도색공사 있다고 하네요. 차 미리 빼두세요~', time:'09:10' },
+  { id:4, me:false, sender:'최이웃 (105호)', text:'알려주셔서 감사해요! 몰랐네요', time:'09:12' },
 ])
 let nextMsgId = 4
 function getTime() {
@@ -308,11 +370,44 @@ async function sendChat() {
             <p class="field-label">시설</p>
             <div class="chip-row">
               <button
-                v-for="f in facilities" :key="f"
-                class="chip" :class="{ active: selFacility === f }"
-                @click="selFacility = f; selSlot = null"
-              >{{ f }}</button>
+                v-for="fac in facilities" :key="fac.name"
+                class="chip"
+                :class="{
+                  active:  selFacility === fac.name && hasPass(fac),
+                  locked:  !hasPass(fac),
+                }"
+                @click="selectFacility(fac)"
+              >
+                <span v-if="!hasPass(fac)" class="chip-lock">🔒</span>
+                {{ fac.name }}
+              </button>
             </div>
+
+            <!-- 만료 임박 안내 (선택된 시설만, 입장권 없음 안내가 없을 때만) -->
+            <div v-if="!ticketAlert && expiringFacilities.some(f => f.name === selFacility)" class="expiry-warn">
+              <div class="expiry-warn-left">
+                <span class="expiry-icon">🕐</span>
+                <div class="expiry-texts">
+                  <span class="expiry-sub">{{ selFacility }} 입장권 만료 예정</span>
+                  <span class="expiry-main">{{ daysLeft(facilities.find(f => f.name === selFacility)) }}일 후 만료됩니다</span>
+                </div>
+              </div>
+              <span class="expiry-badge">D-{{ daysLeft(facilities.find(f => f.name === selFacility)) }}</span>
+            </div>
+
+            <!-- 입장권 없음 안내 -->
+            <Transition name="expand">
+              <div v-if="ticketAlert" class="ticket-alert">
+                <p class="ticket-alert-title">입장권이 필요해요</p>
+                <p class="ticket-alert-desc">{{ ticketAlert }} 이용을 위해 입장권을 구매해 주세요.</p>
+                <div class="ticket-alert-actions">
+                  <a :href="OFFICE_PHONE" class="btn btn-primary ticket-call-btn">📞 관리사무소 전화</a>
+                  <button class="btn btn-outline ticket-close-btn" @click="dismissTicketAlert">닫기</button>
+                </div>
+              </div>
+            </Transition>
+
+            <template v-if="!ticketAlert">
             <p class="field-label" style="margin-top:16px">날짜</p>
             <div class="date-strip">
               <button
@@ -343,6 +438,7 @@ async function sendChat() {
               </button>
             </div>
             <button class="btn btn-primary btn-full" style="margin-top:16px" @click="submitBooking">예약 신청</button>
+            </template>
           </template>
 
           <!-- 공지사항 -->
@@ -360,6 +456,32 @@ async function sendChat() {
                 <p v-if="n.open" class="notice-body">{{ n.body }}</p>
               </Transition>
             </div>
+          </template>
+
+          <!-- 관리비 -->
+          <template v-else-if="active === 'fee'">
+            <div class="fee-header">
+              <div>
+                <p class="panel-title" style="margin-bottom:2px">{{ fee.month }} 관리비</p>
+                <p class="fee-due">납부기한 · {{ fee.dueDate }}</p>
+              </div>
+              <div class="fee-total-wrap">
+                <p class="fee-total">{{ formatKRW(fee.total) }}</p>
+                <span class="fee-status" :class="{ paid: fee.paid }">{{ fee.paid ? '납부완료' : '미납' }}</span>
+              </div>
+            </div>
+            <div class="fee-divider" />
+            <div class="fee-items">
+              <div v-for="item in fee.items" :key="item.label" class="fee-row">
+                <span class="fee-label">{{ item.label }}</span>
+                <span class="fee-amount">{{ formatKRW(item.amount) }}</span>
+              </div>
+            </div>
+            <div class="fee-total-row">
+              <span class="fee-total-label">합계</span>
+              <span class="fee-total-amount">{{ formatKRW(fee.total) }}</span>
+            </div>
+            <button class="btn btn-primary btn-full" style="margin-top:16px" @click="showToast('납부 페이지로 이동합니다.')">납부하기</button>
           </template>
 
           <!-- 방문차량 -->
@@ -428,34 +550,34 @@ async function sendChat() {
 
 <style scoped>
 .home {
-  padding: 14px 14px 48px;
+  padding: 24px 22px 96px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 /* ── 카드 행 ── */
 .card-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 
 .menu-card {
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.9);
-  border-radius: 20px;
-  padding: 20px 16px 16px;
+  border-radius: 18px;
+  padding: 20px;
   cursor: pointer;
   text-align: left;
   font-family: inherit;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-height: 100px;
+  gap: 6px;
+  min-height: 110px;
   position: relative;
   transition: border-color .15s, background .15s, box-shadow .15s;
-  box-shadow: 0 2px 12px rgba(100, 120, 200, 0.10), 0 1px 3px rgba(100, 120, 200, 0.06);
+  box-shadow: 0 4px 12px rgba(100, 120, 200, 0.10);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   touch-action: none;
@@ -464,16 +586,16 @@ async function sendChat() {
 .menu-card:hover  { border-color: rgba(180, 195, 255, 0.6); box-shadow: 0 4px 16px rgba(100, 120, 200, 0.14); }
 .menu-card:active { transform: scale(.98); }
 .menu-card.active {
-  background: #1E1B4B;
-  border-color: #1E1B4B;
-  box-shadow: 0 6px 20px rgba(30, 27, 75, 0.28);
+  background: #26306E;
+  border-color: #2A3578;
+  box-shadow: 0 4px 16px rgba(26, 31, 74, 0.17);
 }
 .menu-card.full {
   grid-column: span 2;
-  min-height: 72px;
+  min-height: 80px;
   flex-direction: row;
   align-items: center;
-  padding: 18px 18px;
+  padding: 20px 24px;
 }
 
 /* 드래그 상태 */
@@ -515,7 +637,7 @@ async function sendChat() {
 .menu-title { font-size: 17px; font-weight: 700; color: #1a1a3e; line-height: 1.3; }
 .menu-sub   { font-size: 12px; color: #9BA3C0; font-weight: 400; }
 .menu-card.active .menu-title { color: #fff; }
-.menu-card.active .menu-sub   { color: rgba(255,255,255,.45); }
+.menu-card.active .menu-sub   { color: #D7DDF5; }
 
 .menu-arrow {
   position: absolute; right: 14px; bottom: 14px;
@@ -563,22 +685,22 @@ async function sendChat() {
 /* ── 콘텐츠 패널 ── */
 .content-panel {
   background: rgba(255, 255, 255, 0.88);
-  border-radius: 20px;
-  padding: 22px 18px;
-  box-shadow: 0 2px 16px rgba(100, 120, 200, 0.12);
+  border-radius: 18px;
+  padding: 24px 20px;
+  box-shadow: 0 4px 16px rgba(100, 120, 200, 0.12);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.9);
 }
 .panel-title {
-  font-size: 15px; font-weight: 700; color: #111;
-  margin-bottom: 18px;
+  font-size: 16px; font-weight: 700; color: #111;
+  margin-bottom: 22px;
 }
 
 /* ── IoT ── */
 .toggle-row {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 0; border-bottom: 1px solid #f3f3f3;
+  padding: 18px 0; border-bottom: 1px solid #f3f3f3;
 }
 .toggle-row:last-child { border-bottom: none; }
 .toggle-label { font-size: 15px; font-weight: 600; color: #111; }
@@ -595,7 +717,94 @@ async function sendChat() {
   font-size: 13px; font-weight: 600; color: #555;
   cursor: pointer; font-family: inherit; transition: all .15s;
 }
-.chip.active { background: #2F3DB8; color: #fff; border-color: #2F3DB8; }
+.chip.active { background: #3A4AA3; color: #fff; border-color: #3A4AA3; }
+.chip.locked {
+  opacity: 0.4;
+  cursor: default;
+  background: #f5f6f8;
+  border-color: #e4e4e7;
+  color: #aaa;
+}
+.chip-lock { margin-right: 3px; font-size: 11px; }
+
+/* ── Expiry warning ── */
+.expiry-warn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #EEF2FF;
+  border: 1px solid #CFD8FF;
+  border-radius: 12px;
+  padding: 10px 12px;
+  gap: 10px;
+}
+.expiry-warn-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.expiry-icon { font-size: 14px; }
+.expiry-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.expiry-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+}
+.expiry-main {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1E3A8A;
+}
+.expiry-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2F3DB8;
+  background: #DDE4FF;
+  border-radius: 999px;
+  padding: 4px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Ticket alert ── */
+.ticket-alert {
+  margin-top: 14px;
+  padding: 18px 16px;
+  background: #EEF2FF;
+  border: 1px solid #CFD8FF;
+  border-radius: 14px;
+  text-align: center;
+}
+.ticket-alert-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1E3A8A;
+  margin-bottom: 6px;
+}
+.ticket-alert-desc {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.ticket-alert-actions {
+  display: flex;
+  gap: 8px;
+}
+.ticket-call-btn {
+  flex: 1;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 12px 0;
+}
+.ticket-close-btn {
+  padding: 12px 16px;
+  font-size: 14px;
+}
 
 /* ── Date strip ── */
 .date-strip {
@@ -631,8 +840,8 @@ async function sendChat() {
   opacity: 0.4;
 }
 .date-cell.selected {
-  background: #2F3DB8;
-  border-color: #2F3DB8;
+  background: #3A4AA3;
+  border-color: #3A4AA3;
   box-shadow: 0 3px 10px rgba(47, 61, 184, 0.28);
 }
 .date-dow {
@@ -645,7 +854,7 @@ async function sendChat() {
   font-weight: 700;
   color: #1a1a3e;
 }
-.date-cell.selected .date-dow,
+.date-cell.selected .date-dow { color: #D5DCF8; }
 .date-cell.selected .date-num { color: #fff; }
 
 /* ── Slot grid ── */
@@ -660,10 +869,10 @@ async function sendChat() {
   font-family: inherit; color: #111; line-height: 1.4; transition: all .15s;
 }
 .slot-btn.full     { background: #fafafa; color: #ddd; cursor: not-allowed; border-color: #f0f0f0; }
-.slot-btn.selected { background: #2F3DB8; color: #fff; border-color: #2F3DB8; }
+.slot-btn.selected { background: #3A4AA3; color: #fff; border-color: #3A4AA3; }
 .slot-avail { font-size: 10px; font-weight: 500; color: #aaa; }
 .slot-btn.full .slot-avail { color: #ddd; }
-.slot-btn.selected .slot-avail { color: rgba(255,255,255,.55); }
+.slot-btn.selected .slot-avail { color: #D5DCF8; }
 
 /* ── Notices ── */
 .notice-item {
@@ -685,6 +894,47 @@ async function sendChat() {
   margin-top: 10px; font-size: 13px; color: #666; line-height: 1.65;
   padding: 12px 14px; background: #f9f9f9; border-radius: 8px;
 }
+
+/* ── 관리비 ── */
+.fee-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.fee-due { font-size: 12px; color: #9BA3C0; margin-top: 3px; }
+.fee-total-wrap { text-align: right; }
+.fee-total { font-size: 20px; font-weight: 700; color: #1a1a3e; letter-spacing: -0.5px; }
+.fee-status {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #FEE2E2;
+  color: #DC2626;
+}
+.fee-status.paid { background: #DCFCE7; color: #16A34A; }
+.fee-divider { height: 1px; background: #f3f3f3; margin-bottom: 12px; }
+.fee-items { display: flex; flex-direction: column; gap: 10px; }
+.fee-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.fee-label  { font-size: 14px; color: #555; }
+.fee-amount { font-size: 14px; font-weight: 600; color: #1a1a3e; }
+.fee-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1.5px solid #e8ebfa;
+}
+.fee-total-label  { font-size: 14px; font-weight: 700; color: #1a1a3e; }
+.fee-total-amount { font-size: 17px; font-weight: 700; color: #3A4AA3; }
 
 /* ── 방문차량 ── */
 .optional { font-size: 12px; color: #bbb; font-weight: 400; }
@@ -708,7 +958,7 @@ async function sendChat() {
   font-size: 14px; line-height: 1.5; word-break: break-word; max-width: 210px;
 }
 .bubble.other { background: rgba(230, 234, 255, 0.7); color: #1a1a3e; border-bottom-left-radius: 4px; }
-.bubble.me    { background: #2F3DB8; color: #fff; border-bottom-right-radius: 4px; }
+.bubble.me    { background: #3A4AA3; color: #fff; border-bottom-right-radius: 4px; }
 .msg-time { font-size: 11px; color: #ccc; flex-shrink: 0; }
 .me-time  { align-self: flex-end; }
 .chat-input-row { display: flex; gap: 8px; }
