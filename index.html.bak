@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>노크타운 Easy</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    #app {
+      width: 100%;
+      max-width: 430px;
+      min-height: 100vh;
+      background: #f0f2f5;
+      position: relative;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: #fff;
+      padding: 16px 20px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .header-logo {
+      width: 34px; height: 34px;
+      background: #1a56db;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .header-title { font-size: 18px; font-weight: 700; color: #1a1a2e; }
+    .header-title span { color: #1a56db; }
+    .header-sub { font-size: 12px; color: #888; margin-top: 1px; }
+    .bell-btn {
+      background: none; border: none; cursor: pointer;
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+      font-size: 20px;
+      position: relative;
+    }
+    .bell-dot {
+      width: 8px; height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+      position: absolute; top: 6px; right: 6px;
+      border: 2px solid #fff;
+    }
+
+    /* ── Grid ── */
+    .grid {
+      padding: 16px 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ── Card base ── */
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 20px 18px 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .card:active { transform: scale(.97); }
+    .card.span-2 { grid-column: span 2; }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #999;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .card-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #1a1a2e;
+      line-height: 1.2;
+    }
+    .card-sub {
+      font-size: 13px;
+      color: #777;
+      margin-top: 4px;
+    }
+    .card-icon {
+      font-size: 44px;
+      position: absolute;
+      right: 14px;
+      bottom: 12px;
+      opacity: .85;
+      line-height: 1;
+    }
+
+    /* ── Accent colours per card ── */
+    .card-iot   { background: linear-gradient(135deg,#eef2ff 0%,#fff 60%); }
+    .card-book  { background: linear-gradient(135deg,#f0fdf4 0%,#fff 60%); }
+    .card-notice{ background: linear-gradient(135deg,#fffbeb 0%,#fff 60%); }
+    .card-car   { background: linear-gradient(135deg,#fdf2f8 0%,#fff 60%); }
+    .card-chat  { background: linear-gradient(135deg,#eff6ff 0%,#fff 60%); }
+
+    /* ── IoT Toggles ── */
+    .toggle-list { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .toggle-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .toggle-name .ico { font-size: 18px; }
+
+    /* Switch */
+    .switch { position: relative; display: inline-block; width: 48px; height: 26px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0;
+      background: #d1d5db;
+      border-radius: 13px;
+      transition: .3s;
+      cursor: pointer;
+    }
+    .slider::before {
+      content: '';
+      position: absolute;
+      width: 20px; height: 20px;
+      left: 3px; bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: .3s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+    input:checked + .slider { background: #1a56db; }
+    input:checked + .slider::before { transform: translateX(22px); }
+    .slider-on { background: #ef4444 !important; }
+    input:checked + .slider-on { background: #ef4444 !important; }
+
+    /* ── Action button (for non-toggle cards) ── */
+    .action-btn {
+      margin-top: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #1a56db;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 9px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .action-btn:hover { background: #1447b0; }
+    .action-btn.green  { background: #16a34a; }
+    .action-btn.green:hover { background: #15803d; }
+    .action-btn.amber  { background: #d97706; }
+    .action-btn.amber:hover { background: #b45309; }
+    .action-btn.purple { background: #7c3aed; }
+    .action-btn.purple:hover { background: #6d28d9; }
+
+    /* ── Overlay modal ── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 50;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal {
+      background: #fff;
+      width: 100%; max-width: 430px;
+      border-radius: 24px 24px 0 0;
+      padding: 28px 24px 40px;
+      animation: slideUp .25s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0);    }
+    }
+    .modal-handle {
+      width: 40px; height: 4px;
+      background: #e5e7eb;
+      border-radius: 2px;
+      margin: 0 auto 20px;
+    }
+    .modal-title {
+      font-size: 20px; font-weight: 800; color: #1a1a2e;
+      margin-bottom: 18px;
+    }
+
+    /* Car form */
+    .form-group { margin-bottom: 14px; }
+    .form-label { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 16px;
+      outline: none;
+      transition: border .2s;
+    }
+    .form-input:focus { border-color: #1a56db; }
+    .submit-btn {
+      width: 100%;
+      padding: 15px;
+      background: #1a56db;
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: background .15s;
+    }
+    .submit-btn:hover { background: #1447b0; }
+
+    /* Notice list */
+    .notice-item {
+      padding: 14px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .notice-item:last-child { border-bottom: none; }
+    .notice-tag {
+      display: inline-block;
+      font-size: 10px; font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+      margin-bottom: 5px;
+    }
+    .tag-urgent { background: #fee2e2; color: #dc2626; }
+    .tag-info   { background: #dbeafe; color: #1d4ed8; }
+    .tag-gen    { background: #f3f4f6; color: #555; }
+    .notice-text { font-size: 15px; font-weight: 600; color: #1a1a2e; }
+    .notice-date { font-size: 12px; color: #aaa; margin-top: 3px; }
+
+    /* Booking slots */
+    .facility-tabs {
+      display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .facility-tab {
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-size: 13px; font-weight: 600;
+      border: 1.5px solid #e5e7eb;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .facility-tab.active {
+      background: #1a56db; color: #fff; border-color: #1a56db;
+    }
+    .slot-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+    .slot-btn {
+      padding: 10px 0;
+      border-radius: 10px;
+      border: 1.5px solid #e5e7eb;
+      background: #fff;
+      font-size: 13px; font-weight: 600;
+      color: #333;
+      cursor: pointer;
+      text-align: center;
+      transition: all .15s;
+    }
+    .slot-btn:hover { border-color: #1a56db; color: #1a56db; }
+    .slot-btn.full { background: #f9fafb; color: #ccc; cursor: not-allowed; }
+    .slot-btn.selected { background: #1a56db; color: #fff; border-color: #1a56db; }
+
+    /* Chat */
+    .chat-wrap { height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+    .chat-bubble {
+      max-width: 75%;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .chat-bubble.me { align-self: flex-end; background: #1a56db; color: #fff; border-bottom-right-radius: 4px; }
+    .chat-bubble.other { align-self: flex-start; background: #f3f4f6; color: #1a1a2e; border-bottom-left-radius: 4px; }
+    .chat-sender { font-size: 11px; color: #aaa; margin-bottom: 3px; }
+    .chat-input-row { display: flex; gap: 8px; }
+    .chat-input {
+      flex: 1;
+      padding: 12px 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 15px;
+      outline: none;
+    }
+    .chat-input:focus { border-color: #1a56db; }
+    .chat-send {
+      padding: 0 18px;
+      background: #1a56db; color: #fff;
+      border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 36px;
+      left: 50%; transform: translateX(-50%);
+      background: #1a1a2e;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 14px; font-weight: 600;
+      z-index: 100;
+      animation: fadeInOut 2.4s ease forwards;
+      white-space: nowrap;
+    }
+    @keyframes fadeInOut {
+      0%   { opacity:0; transform: translateX(-50%) translateY(10px); }
+      15%  { opacity:1; transform: translateX(-50%) translateY(0);    }
+      75%  { opacity:1; }
+      100% { opacity:0; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ── -->
+  <header class="header">
+    <div class="header-left">
+      <div class="header-logo">🏠</div>
+      <div>
+        <div class="header-title"><span>노크타운</span> Easy</div>
+        <div class="header-sub">강남 아파트 1단지 · 101동 502호</div>
+      </div>
+    </div>
+    <button class="bell-btn" @click="showToast('알림이 없습니다.')">
+      🔔
+      <span class="bell-dot"></span>
+    </button>
+  </header>
+
+  <!-- ── Main Grid ── -->
+  <main class="grid">
+
+    <!-- 1. 홈IoT -->
+    <div class="card card-iot span-2">
+      <div class="card-label">HOME IoT</div>
+      <div class="card-title">홈 IoT</div>
+      <div class="card-sub">우리집 기기 제어</div>
+      <div class="toggle-list">
+        <div class="toggle-row">
+          <div class="toggle-name"><span class="ico">💡</span> 조명</div>
+          <label class="switch">
+            <input type="checkbox" v-model="iot.light" @change="onIotChange('조명', iot.light)" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-name"><span class="ico">❄️</span> 냉방</div>
+          <label class="switch">
+            <input type="checkbox" v-model="iot.ac" @change="onIotChange('냉방', iot.ac)" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-name"><span class="ico">🔒</span> 방범</div>
+          <label class="switch">
+            <input type="checkbox" v-model="iot.security" :disabled="iot.security" @change="onSecurityOn" />
+            <span class="slider slider-on"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 커뮤니티시설 예약 -->
+    <div class="card card-book" @click="openModal('book')">
+      <div class="card-label">BOOKING</div>
+      <div class="card-title">커뮤니티<br/>시설 예약</div>
+      <button class="action-btn green" @click.stop="openModal('book')">예약하기 →</button>
+      <div class="card-icon">🏊</div>
+    </div>
+
+    <!-- 3. 공지 -->
+    <div class="card card-notice" @click="openModal('notice')">
+      <div class="card-label">NOTICE</div>
+      <div class="card-title">공지<br/>사항</div>
+      <button class="action-btn amber" @click.stop="openModal('notice')">확인하기 →</button>
+      <div class="card-icon">📢</div>
+    </div>
+
+    <!-- 4. 방문차량등록 -->
+    <div class="card card-car" @click="openModal('car')">
+      <div class="card-label">VISITOR</div>
+      <div class="card-title">방문차량<br/>등록</div>
+      <button class="action-btn" @click.stop="openModal('car')">등록하기 →</button>
+      <div class="card-icon">🚗</div>
+    </div>
+
+    <!-- 5. 모두챗 -->
+    <div class="card card-chat" @click="openModal('chat')">
+      <div class="card-label">CHAT</div>
+      <div class="card-title">모두챗</div>
+      <div class="card-sub">입주민 채팅</div>
+      <button class="action-btn purple" @click.stop="openModal('chat')">채팅 열기 →</button>
+      <div class="card-icon">💬</div>
+    </div>
+
+  </main>
+
+  <!-- ── Toast ── -->
+  <div v-if="toast.show" class="toast">{{ toast.msg }}</div>
+
+  <!-- ── Modals ── -->
+  <transition name="fade">
+    <div v-if="modal" class="overlay" @click.self="closeModal">
+
+      <!-- 커뮤니티시설 예약 -->
+      <div v-if="modal==='book'" class="modal">
+        <div class="modal-handle"></div>
+        <div class="modal-title">🏊 커뮤니티시설 예약</div>
+        <div class="facility-tabs">
+          <div v-for="f in facilities" :key="f"
+               class="facility-tab" :class="{active: selectedFacility===f}"
+               @click="selectedFacility=f">{{ f }}</div>
+        </div>
+        <div class="slot-grid">
+          <div v-for="s in slots" :key="s.time"
+               class="slot-btn"
+               :class="{full: s.full, selected: s.time===selectedSlot}"
+               @click="!s.full && (selectedSlot=s.time)">
+            {{ s.time }}<br/><span style="font-size:11px;font-weight:400;">{{ s.full ? '마감' : '가능' }}</span>
+          </div>
+        </div>
+        <button class="submit-btn" style="margin-top:16px" @click="submitBooking">예약 신청</button>
+      </div>
+
+      <!-- 공지사항 -->
+      <div v-if="modal==='notice'" class="modal">
+        <div class="modal-handle"></div>
+        <div class="modal-title">📢 공지사항</div>
+        <div v-for="n in notices" :key="n.id" class="notice-item">
+          <div>
+            <span class="notice-tag" :class="n.tagClass">{{ n.tag }}</span>
+          </div>
+          <div class="notice-text">{{ n.title }}</div>
+          <div class="notice-date">{{ n.date }}</div>
+        </div>
+      </div>
+
+      <!-- 방문차량등록 -->
+      <div v-if="modal==='car'" class="modal">
+        <div class="modal-handle"></div>
+        <div class="modal-title">🚗 방문차량 등록</div>
+        <div class="form-group">
+          <div class="form-label">차량번호</div>
+          <input class="form-input" v-model="carForm.plate" placeholder="예) 12가 3456" maxlength="10" />
+        </div>
+        <div class="form-group">
+          <div class="form-label">방문일시</div>
+          <input class="form-input" type="datetime-local" v-model="carForm.datetime" />
+        </div>
+        <div class="form-group">
+          <div class="form-label">방문 목적 (선택)</div>
+          <input class="form-input" v-model="carForm.purpose" placeholder="예) 가족 방문" />
+        </div>
+        <button class="submit-btn" @click="submitCar">등록 완료</button>
+      </div>
+
+      <!-- 모두챗 -->
+      <div v-if="modal==='chat'" class="modal" @click.stop>
+        <div class="modal-handle"></div>
+        <div class="modal-title">💬 모두챗</div>
+        <div class="chat-wrap" ref="chatWrap">
+          <div v-for="(m,i) in messages" :key="i">
+            <div v-if="m.sender!=='me'" class="chat-sender">{{ m.sender }}</div>
+            <div class="chat-bubble" :class="m.sender==='me'?'me':'other'">{{ m.text }}</div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input class="chat-input" v-model="chatInput" placeholder="메시지를 입력하세요"
+                 @keyup.enter="sendChat" />
+          <button class="chat-send" @click="sendChat">전송</button>
+        </div>
+      </div>
+
+    </div>
+  </transition>
+
+</div>
+
+<script>
+const { createApp, ref, reactive, nextTick } = Vue
+
+createApp({
+  setup() {
+    // ── IoT ──
+    const iot = reactive({ light: false, ac: false, security: false })
+    function onIotChange(name, val) {
+      showToast(`${name} ${val ? 'ON' : 'OFF'} 되었습니다.`)
+      // TODO: call real API
+    }
+    function onSecurityOn() {
+      if (iot.security) showToast('방범 모드가 활성화되었습니다.')
+    }
+
+    // ── Modal ──
+    const modal = ref(null)
+    function openModal(name) { modal.value = name }
+    function closeModal() { modal.value = null }
+
+    // ── Booking ──
+    const facilities = ['헬스장', '수영장', '골프장', 'BBQ장', '독서실']
+    const selectedFacility = ref('헬스장')
+    const selectedSlot = ref(null)
+    const slots = [
+      { time: '09:00', full: false }, { time: '10:00', full: true  },
+      { time: '11:00', full: false }, { time: '13:00', full: false },
+      { time: '14:00', full: true  }, { time: '15:00', full: false },
+      { time: '16:00', full: false }, { time: '17:00', full: true  },
+      { time: '18:00', full: false },
+    ]
+    function submitBooking() {
+      if (!selectedSlot.value) { showToast('시간을 선택해 주세요.'); return }
+      showToast(`${selectedFacility.value} ${selectedSlot.value} 예약 완료!`)
+      selectedSlot.value = null
+      closeModal()
+    }
+
+    // ── Notices ──
+    const notices = [
+      { id:1, tag:'긴급', tagClass:'tag-urgent', title:'4월 5일(토) 단수 예정 안내 (오전 10시~12시)', date:'2026.04.03' },
+      { id:2, tag:'안내', tagClass:'tag-info',   title:'2026년 관리비 납부 마감일 안내', date:'2026.04.01' },
+      { id:3, tag:'일반', tagClass:'tag-gen',    title:'엘리베이터 정기 점검 일정 공지', date:'2026.03.28' },
+      { id:4, tag:'일반', tagClass:'tag-gen',    title:'재활용 분리수거 요일 변경 안내', date:'2026.03.20' },
+    ]
+
+    // ── Car ──
+    const carForm = reactive({ plate: '', datetime: '', purpose: '' })
+    function submitCar() {
+      if (!carForm.plate) { showToast('차량번호를 입력해 주세요.'); return }
+      showToast(`${carForm.plate} 차량 등록 완료!`)
+      carForm.plate = ''; carForm.datetime = ''; carForm.purpose = ''
+      closeModal()
+    }
+
+    // ── Chat ──
+    const chatWrap = ref(null)
+    const chatInput = ref('')
+    const messages = reactive([
+      { sender: '관리사무소', text: '안녕하세요! 무엇이든 문의해 주세요 😊' },
+      { sender: '김이웃 (203호)', text: '내일 BBQ장 자리 있나요?' },
+      { sender: '관리사무소', text: '네, 오후 2시 이후 예약 가능합니다.' },
+    ])
+    async function sendChat() {
+      const txt = chatInput.value.trim()
+      if (!txt) return
+      messages.push({ sender: 'me', text: txt })
+      chatInput.value = ''
+      await nextTick()
+      if (chatWrap.value) chatWrap.value.scrollTop = chatWrap.value.scrollHeight
+    }
+
+    // ── Toast ──
+    const toast = reactive({ show: false, msg: '' })
+    let toastTimer = null
+    function showToast(msg) {
+      toast.msg = msg
+      toast.show = false
+      nextTick(() => {
+        toast.show = true
+        clearTimeout(toastTimer)
+        toastTimer = setTimeout(() => { toast.show = false }, 2500)
+      })
+    }
+
+    return {
+      iot, onIotChange, onSecurityOn,
+      modal, openModal, closeModal,
+      facilities, selectedFacility, selectedSlot, slots, submitBooking,
+      notices,
+      carForm, submitCar,
+      chatWrap, chatInput, messages, sendChat,
+      toast, showToast,
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>
