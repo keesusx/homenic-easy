@@ -17,8 +17,8 @@ const cards = reactive([
   { key: 'booking', title: '시설 예약', sub: '커뮤니티 예약' },
   { key: 'notice',  title: '공지사항',  sub: '아파트 공지' },
   { key: 'car',     title: '방문차량',  sub: '차량 등록' },
-  { key: 'fee',     title: '관리비',   sub: '이번달 납부 현황' },
-  { key: 'chat',    title: '모두챗',   sub: '입주민 채팅' },
+  { key: 'fee',  title: '관리비',  sub: '이번달 납부 현황' },
+  { key: 'chat', title: '모두챗', sub: '입주민 채팅' },
 ])
 
 // 행별 카드 구성 (computed)
@@ -564,8 +564,8 @@ async function sendChat() {
 }
 
 .menu-card {
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: var(--c-card-bg);
+  border: 1px solid var(--c-card-border);
   border-radius: 18px;
   padding: 20px;
   cursor: pointer;
@@ -576,7 +576,7 @@ async function sendChat() {
   gap: 6px;
   min-height: 110px;
   position: relative;
-  transition: border-color .15s, background .15s, box-shadow .15s;
+  transition: border-color .15s, background .3s, box-shadow .15s, color .3s;
   box-shadow: 0 4px 12px rgba(100, 120, 200, 0.10);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
@@ -606,7 +606,7 @@ async function sendChat() {
 .menu-card.is-over {
   border-color: #6B8EFF;
   border-width: 2px;
-  background: rgba(230, 235, 255, 0.9);
+  background: var(--c-date-cell-bg);
 }
 .menu-card.active.is-over {
   background: #2a2680;
@@ -634,8 +634,8 @@ async function sendChat() {
   height: 44px;
 }
 
-.menu-title { font-size: 17px; font-weight: 700; color: #1a1a3e; line-height: 1.3; }
-.menu-sub   { font-size: 12px; color: #9BA3C0; font-weight: 400; }
+.menu-title { font-size: 17px; font-weight: 700; color: var(--c-text-primary); line-height: 1.3; transition: color .3s; }
+.menu-sub   { font-size: 12px; color: var(--c-text-secondary); font-weight: 400; transition: color .3s; }
 .menu-card.active .menu-title { color: #fff; }
 .menu-card.active .menu-sub   { color: #D7DDF5; }
 
@@ -665,7 +665,7 @@ async function sendChat() {
 /* ── 드래그 고스트 ── */
 .drag-ghost {
   position: fixed;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--c-ghost-bg);
   border: 2px solid #6B8EFF;
   border-radius: 20px;
   padding: 20px 16px 16px;
@@ -684,28 +684,29 @@ async function sendChat() {
 
 /* ── 콘텐츠 패널 ── */
 .content-panel {
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--c-panel-bg);
   border-radius: 18px;
   padding: 24px 20px;
   box-shadow: 0 4px 16px rgba(100, 120, 200, 0.12);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--c-panel-border);
+  transition: background .3s, border-color .3s;
 }
 .panel-title {
-  font-size: 16px; font-weight: 700; color: #111;
-  margin-bottom: 22px;
+  font-size: 16px; font-weight: 700; color: var(--c-text-primary);
+  margin-bottom: 22px; transition: color .3s;
 }
 
 /* ── IoT ── */
 .toggle-row {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 0; border-bottom: 1px solid #f3f3f3;
+  padding: 18px 0; border-bottom: 1px solid var(--c-divider);
 }
 .toggle-row:last-child { border-bottom: none; }
-.toggle-label { font-size: 15px; font-weight: 600; color: #111; }
-.toggle-state { font-size: 12px; font-weight: 500; color: #ccc; margin-top: 3px; transition: color .2s; }
-.toggle-state.on { color: #111; }
+.toggle-label { font-size: 15px; font-weight: 600; color: var(--c-text-primary); transition: color .3s; }
+.toggle-state { font-size: 12px; font-weight: 500; color: #aaa; margin-top: 3px; transition: color .2s; }
+.toggle-state.on { color: var(--c-text-primary); }
 .only-hint { font-size: 11px; color: #e0e0e0; margin-left: 4px; font-weight: 400; }
 
 /* ── Chips ── */
@@ -713,8 +714,8 @@ async function sendChat() {
 .chip-row { display: flex; flex-wrap: wrap; gap: 7px; }
 .chip {
   padding: 8px 14px; border-radius: 20px;
-  border: 1.5px solid #e4e4e7; background: #fff;
-  font-size: 13px; font-weight: 600; color: #555;
+  border: 1.5px solid var(--c-chip-border); background: var(--c-chip-bg);
+  font-size: 13px; font-weight: 600; color: var(--c-chip-text);
   cursor: pointer; font-family: inherit; transition: all .15s;
 }
 .chip.active { background: #3A4AA3; color: #fff; border-color: #3A4AA3; }
@@ -824,8 +825,8 @@ async function sendChat() {
   gap: 4px;
   padding: 8px 10px;
   border-radius: 12px;
-  border: 1.5px solid #E8EBFA;
-  background: rgba(255,255,255,0.7);
+  border: 1.5px solid var(--c-date-cell-border);
+  background: var(--c-date-cell-bg);
   cursor: pointer;
   font-family: inherit;
   transition: all .15s;
@@ -847,12 +848,12 @@ async function sendChat() {
 .date-dow {
   font-size: 11px;
   font-weight: 600;
-  color: #9BA3C0;
+  color: var(--c-text-secondary);
 }
 .date-num {
   font-size: 15px;
   font-weight: 700;
-  color: #1a1a3e;
+  color: var(--c-text-primary);
 }
 .date-cell.selected .date-dow { color: #D5DCF8; }
 .date-cell.selected .date-num { color: #fff; }
@@ -864,9 +865,9 @@ async function sendChat() {
 .slot-btn {
   display: flex; flex-direction: column; align-items: center;
   padding: 10px 2px; border-radius: 10px;
-  border: 1.5px solid #e4e4e7; background: #fff;
+  border: 1.5px solid var(--c-slot-border); background: var(--c-slot-bg);
   cursor: pointer; font-size: 12px; font-weight: 600;
-  font-family: inherit; color: #111; line-height: 1.4; transition: all .15s;
+  font-family: inherit; color: var(--c-slot-text); line-height: 1.4; transition: all .15s;
 }
 .slot-btn.full     { background: #fafafa; color: #ddd; cursor: not-allowed; border-color: #f0f0f0; }
 .slot-btn.selected { background: #3A4AA3; color: #fff; border-color: #3A4AA3; }
@@ -876,7 +877,7 @@ async function sendChat() {
 
 /* ── Notices ── */
 .notice-item {
-  padding: 14px 0; border-bottom: 1px solid #f3f3f3; cursor: pointer;
+  padding: 14px 0; border-bottom: 1px solid var(--c-divider); cursor: pointer;
 }
 .notice-item:last-child { border-bottom: none; }
 .notice-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
@@ -888,11 +889,11 @@ async function sendChat() {
 .notice-tag.urgent { background: #fff0f0; color: #e53e3e; }
 .notice-tag.info   { background: #ebf4ff; color: #2b6cb0; }
 .notice-tag.gen    { background: #f5f5f5; color: #888; }
-.notice-title-text { font-size: 14px; font-weight: 600; color: #111; line-height: 1.4; }
-.notice-date { font-size: 11px; color: #ccc; white-space: nowrap; flex-shrink: 0; padding-top: 2px; }
+.notice-title-text { font-size: 14px; font-weight: 600; color: var(--c-notice-text); line-height: 1.4; transition: color .3s; }
+.notice-date { font-size: 11px; color: #aaa; white-space: nowrap; flex-shrink: 0; padding-top: 2px; }
 .notice-body {
-  margin-top: 10px; font-size: 13px; color: #666; line-height: 1.65;
-  padding: 12px 14px; background: #f9f9f9; border-radius: 8px;
+  margin-top: 10px; font-size: 13px; color: var(--c-notice-body-text); line-height: 1.65;
+  padding: 12px 14px; background: var(--c-notice-body-bg); border-radius: 8px; transition: background .3s, color .3s;
 }
 
 /* ── 관리비 ── */
@@ -902,9 +903,9 @@ async function sendChat() {
   align-items: flex-start;
   margin-bottom: 14px;
 }
-.fee-due { font-size: 12px; color: #9BA3C0; margin-top: 3px; }
+.fee-due { font-size: 12px; color: var(--c-text-secondary); margin-top: 3px; }
 .fee-total-wrap { text-align: right; }
-.fee-total { font-size: 20px; font-weight: 700; color: #1a1a3e; letter-spacing: -0.5px; }
+.fee-total { font-size: 20px; font-weight: 700; color: var(--c-fee-text); letter-spacing: -0.5px; transition: color .3s; }
 .fee-status {
   display: inline-block;
   margin-top: 4px;
@@ -916,24 +917,24 @@ async function sendChat() {
   color: #DC2626;
 }
 .fee-status.paid { background: #DCFCE7; color: #16A34A; }
-.fee-divider { height: 1px; background: #f3f3f3; margin-bottom: 12px; }
+.fee-divider { height: 1px; background: var(--c-fee-divider); margin-bottom: 12px; transition: background .3s; }
 .fee-items { display: flex; flex-direction: column; gap: 10px; }
 .fee-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.fee-label  { font-size: 14px; color: #555; }
-.fee-amount { font-size: 14px; font-weight: 600; color: #1a1a3e; }
+.fee-label  { font-size: 14px; color: var(--c-fee-label); transition: color .3s; }
+.fee-amount { font-size: 14px; font-weight: 600; color: var(--c-fee-text); transition: color .3s; }
 .fee-total-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: 14px;
   padding-top: 12px;
-  border-top: 1.5px solid #e8ebfa;
+  border-top: 1.5px solid var(--c-divider);
 }
-.fee-total-label  { font-size: 14px; font-weight: 700; color: #1a1a3e; }
+.fee-total-label  { font-size: 14px; font-weight: 700; color: var(--c-fee-text); transition: color .3s; }
 .fee-total-amount { font-size: 17px; font-weight: 700; color: #3A4AA3; }
 
 /* ── 방문차량 ── */
@@ -948,18 +949,18 @@ async function sendChat() {
 .msg-row { display: flex; align-items: flex-end; gap: 8px; }
 .msg-row.me { flex-direction: row-reverse; }
 .avatar {
-  width: 28px; height: 28px; background: #f0f0f0; border-radius: 50%;
+  width: 28px; height: 28px; background: var(--c-avatar-bg); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; color: #666; flex-shrink: 0;
+  font-size: 11px; font-weight: 700; color: var(--c-avatar-text); flex-shrink: 0; transition: background .3s, color .3s;
 }
-.sender-name { font-size: 11px; color: #bbb; margin-bottom: 4px; padding-left: 2px; }
+.sender-name { font-size: 11px; color: #aaa; margin-bottom: 4px; padding-left: 2px; }
 .bubble {
   padding: 10px 13px; border-radius: 14px;
   font-size: 14px; line-height: 1.5; word-break: break-word; max-width: 210px;
 }
-.bubble.other { background: rgba(230, 234, 255, 0.7); color: #1a1a3e; border-bottom-left-radius: 4px; }
+.bubble.other { background: var(--c-bubble-other-bg); color: var(--c-bubble-other-text); border-bottom-left-radius: 4px; transition: background .3s, color .3s; }
 .bubble.me    { background: #3A4AA3; color: #fff; border-bottom-right-radius: 4px; }
-.msg-time { font-size: 11px; color: #ccc; flex-shrink: 0; }
+.msg-time { font-size: 11px; color: #aaa; flex-shrink: 0; }
 .me-time  { align-self: flex-end; }
 .chat-input-row { display: flex; gap: 8px; }
 .chat-input { flex: 1; }

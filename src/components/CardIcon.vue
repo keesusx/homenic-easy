@@ -50,6 +50,12 @@ defineProps({ name: { type: String, required: true } })
       <circle cx="36" cy="31" r="4" stroke="currentColor" stroke-width="2"/>
     </template>
 
+    <!-- 설정: 기어 -->
+    <template v-else-if="name === 'settings'">
+      <circle cx="26" cy="26" r="7" stroke="currentColor" stroke-width="2.2"/>
+      <path d="M26 10v4M26 38v4M10 26H6M46 26h-4M14.1 14.1l2.8 2.8M33.1 33.1l2.8 2.8M14.1 37.9l2.8-2.8M33.1 18.9l2.8-2.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+    </template>
+
     <!-- 모두챗: 말풍선 두 개 -->
     <template v-else-if="name === 'chat'">
       <path d="M5 10h25a3 3 0 0 1 3 3v13a3 3 0 0 1-3 3H15l-7 5v-5H5a3 3 0 0 1-3-3V13a3 3 0 0 1 3-3z"
