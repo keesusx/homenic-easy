@@ -82,6 +82,26 @@ npm run build    # 프로덕션 빌드
 npm run preview  # 빌드 결과 미리보기
 ```
 
+## MCP 워크플로우
+
+### 연결된 MCP 서버
+- **Pencil MCP**: 디자인 생성 및 편집 (`untitled.pen`)
+- **GitHub MCP**: PR/이슈/레포 관리 (형상관리)
+
+### 디자인 요구사항 처리 규칙
+디자인 관련 요구사항이 오면 **Claude가 직접 디자인하지 않고 Pencil MCP에게 전적으로 위임**한다.
+
+1. 요구사항 → Pencil MCP로 디자인 생성 요청
+2. Pencil MCP 결과물(스크린샷/토큰) → MCP로 수신
+3. 결과물 기반으로 Vue 코드 구현
+
+Claude는 디자인 결정을 직접 내리지 않는다. 색상, 간격, 레이아웃 등 시각적 판단은 Pencil에게 맡긴다.
+
+### 배포 규칙
+- 변경 후 **자동 push 금지** — `npm run dev`로 로컬 확인만
+- push는 사용자의 명시적 요청 시에만 실행
+- Vercel이 main 브랜치 push 시 자동 배포
+
 ## 읽지 말 것 (탐색 제외 디렉터리)
 아래 디렉터리는 절대 읽거나 탐색하지 말 것:
 - `node_modules/`

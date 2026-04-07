@@ -307,6 +307,26 @@ async function sendChat() {
   await nextTick()
   if (chatWrap.value) chatWrap.value.scrollTop = chatWrap.value.scrollHeight
 }
+
+// ── 배너 (이벤트) ──────────────────────────────────────────────
+const banners = reactive([
+  { id: 1, tag: '🎉 이벤트', title: '4월 관리비 납부하고\n스타벅스 쿠폰 받아가세요!', grad: ['#3A4AA3', '#1E2D7D'] },
+  { id: 2, tag: '🏋️ 시설',  title: '헬스장 이용권 봄맞이\n특별 할인 중!',           grad: ['#1E6B4A', '#0D4530'] },
+  { id: 3, tag: '🌸 봄 이벤트', title: '입주민 사진 공모전\n4월 30일까지 참여하세요', grad: ['#7C3AA3', '#4B1E7D'] },
+])
+const bannerIdx = ref(0)
+
+const bannerTrackRef = ref(null)
+let bTouchStartX = 0
+
+function onBannerTouchStart(e) {
+  bTouchStartX = e.touches[0].clientX
+}
+function onBannerTouchEnd(e) {
+  const dx = e.changedTouches[0].clientX - bTouchStartX
+  if (dx < -40 && bannerIdx.value < banners.length - 1) bannerIdx.value++
+  else if (dx > 40 && bannerIdx.value > 0) bannerIdx.value--
+}
 </script>
 
 <template>
@@ -531,6 +551,41 @@ async function sendChat() {
       </Transition>
 
     </template>
+
+    <!-- 배너 (이벤트) -->
+    <section class="banner-section">
+      <div class="banner-section-header">
+        <span class="banner-section-title">이벤트</span>
+        <span class="banner-section-more">전체보기</span>
+      </div>
+      <div
+        class="banner-track-wrap"
+        ref="bannerTrackRef"
+        @touchstart.passive="onBannerTouchStart"
+        @touchend.passive="onBannerTouchEnd"
+      >
+        <div class="banner-track" :style="{ transform: `translateX(${-bannerIdx * 100}%)` }">
+          <div
+            v-for="b in banners" :key="b.id"
+            class="banner-card"
+            :style="{ background: `linear-gradient(135deg, ${b.grad[0]}, ${b.grad[1]})` }"
+          >
+            <div class="banner-deco1" />
+            <div class="banner-deco2" />
+            <span class="banner-tag">{{ b.tag }}</span>
+            <p class="banner-title">{{ b.title }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="banner-dots">
+        <span
+          v-for="(b, i) in banners" :key="b.id"
+          class="banner-dot"
+          :class="{ active: i === bannerIdx }"
+          @click="bannerIdx = i"
+        />
+      </div>
+    </section>
 
   </main>
 
@@ -965,6 +1020,104 @@ async function sendChat() {
 .chat-input-row { display: flex; gap: 8px; }
 .chat-input { flex: 1; }
 .send-btn   { padding: 0 18px; font-size: 14px; white-space: nowrap; }
+
+/* ── 배너 ── */
+.banner-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.banner-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.banner-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-text-primary);
+  transition: color .3s;
+}
+.banner-section-more {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  transition: color .3s;
+}
+.banner-track-wrap {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 18px;
+}
+.banner-track {
+  display: flex;
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+}
+.banner-card {
+  flex-shrink: 0;
+  width: 100%;
+  height: 120px;
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+  padding: 18px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.banner-deco1 {
+  position: absolute;
+  width: 160px; height: 160px;
+  border-radius: 80px;
+  background: rgba(255,255,255,0.07);
+  top: -30px; right: 0px;
+  pointer-events: none;
+}
+.banner-deco2 {
+  position: absolute;
+  width: 100px; height: 100px;
+  border-radius: 50px;
+  background: rgba(255,255,255,0.04);
+  top: 50px; right: -10px;
+  pointer-events: none;
+}
+.banner-tag {
+  position: absolute;
+  top: 18px; left: 18px;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+.banner-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.45;
+  white-space: pre-line;
+}
+.banner-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  align-items: center;
+}
+.banner-dot {
+  width: 6px; height: 6px;
+  border-radius: 3px;
+  background: #C5CADF;
+  cursor: pointer;
+  transition: width .25s, background .25s;
+}
+.banner-dot.active {
+  width: 20px;
+  background: #34449C;
+}
 
 /* ── Transitions ── */
 .panel-enter-active { transition: opacity .2s ease, transform .2s ease; }
