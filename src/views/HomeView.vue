@@ -571,29 +571,29 @@ function onEasyToggle() {
         <span class="banner-section-title">이벤트</span>
         <span class="banner-section-more">전체보기</span>
       </div>
-      <div class="banner-slider">
-        <div
-          class="banner-track-wrap"
-          ref="bannerTrackRef"
-          @touchstart.passive="onBannerTouchStart"
-          @touchend.passive="onBannerTouchEnd"
-        >
-          <div class="banner-track" :style="{ transform: `translateX(${-bannerIdx * 100}%)` }">
-            <div
-              v-for="b in banners" :key="b.id"
-              class="banner-card"
-              :style="{ background: `linear-gradient(135deg, ${b.grad[0]}, ${b.grad[1]})` }"
-            >
-              <div class="banner-deco1" />
-              <div class="banner-deco2" />
-              <span class="banner-tag">{{ b.tag }}</span>
-              <p class="banner-title">{{ b.title }}</p>
-            </div>
+      <div
+        class="banner-track-wrap"
+        ref="bannerTrackRef"
+        @touchstart.passive="onBannerTouchStart"
+        @touchend.passive="onBannerTouchEnd"
+      >
+        <div class="banner-track" :style="{ transform: `translateX(${-bannerIdx * 100}%)` }">
+          <div
+            v-for="b in banners" :key="b.id"
+            class="banner-card"
+            :style="{ background: `linear-gradient(135deg, ${b.grad[0]}, ${b.grad[1]})` }"
+          >
+            <div class="banner-deco1" />
+            <div class="banner-deco2" />
+            <span class="banner-tag">{{ b.tag }}</span>
+            <p class="banner-title">{{ b.title }}</p>
           </div>
         </div>
+      </div>
+      <div class="banner-nav">
         <button
-          class="banner-arrow banner-arrow-prev"
-          :class="{ hidden: bannerIdx === 0 }"
+          class="banner-nav-btn"
+          :class="{ invisible: bannerIdx === 0 }"
           @click="bannerIdx--"
           aria-label="이전 배너"
         >
@@ -601,9 +601,17 @@ function onEasyToggle() {
             <path d="M8 2L2 8L8 14" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
+        <div class="banner-dots">
+          <span
+            v-for="(b, i) in banners" :key="b.id"
+            class="banner-dot"
+            :class="{ active: i === bannerIdx }"
+            @click="bannerIdx = i"
+          />
+        </div>
         <button
-          class="banner-arrow banner-arrow-next"
-          :class="{ hidden: bannerIdx === banners.length - 1 }"
+          class="banner-nav-btn"
+          :class="{ invisible: bannerIdx === banners.length - 1 }"
           @click="bannerIdx++"
           aria-label="다음 배너"
         >
@@ -611,14 +619,6 @@ function onEasyToggle() {
             <path d="M2 2L8 8L2 14" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-      </div>
-      <div class="banner-dots">
-        <span
-          v-for="(b, i) in banners" :key="b.id"
-          class="banner-dot"
-          :class="{ active: i === bannerIdx }"
-          @click="bannerIdx = i"
-        />
       </div>
     </section>
 
@@ -1077,9 +1077,27 @@ function onEasyToggle() {
   flex-direction: column;
   gap: 10px;
 }
-.banner-slider {
-  position: relative;
+.banner-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
+.banner-nav-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #26306E;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s, opacity .2s;
+}
+.banner-nav-btn:active { background: #1a2050; }
+.banner-nav-btn.invisible { opacity: 0; pointer-events: none; }
 .banner-section-header {
   display: flex;
   justify-content: space-between;
@@ -1098,28 +1116,6 @@ function onEasyToggle() {
   cursor: pointer;
   transition: color .3s;
 }
-.banner-arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.28);
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  transition: background .15s, opacity .2s;
-}
-.banner-arrow:active { background: rgba(0, 0, 0, 0.45); }
-.banner-arrow.hidden { opacity: 0; pointer-events: none; }
-.banner-arrow-prev { left: 10px; }
-.banner-arrow-next { right: 10px; }
 
 .banner-track-wrap {
   width: 100%;
