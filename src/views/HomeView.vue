@@ -327,6 +327,12 @@ function onBannerTouchEnd(e) {
   if (dx < -40 && bannerIdx.value < banners.length - 1) bannerIdx.value++
   else if (dx > 40 && bannerIdx.value > 0) bannerIdx.value--
 }
+
+// ── 간편모드 토글 ──────────────────────────────────────────────
+function onEasyToggle() {
+  showToast('기존 홈닉 앱으로 전환합니다.')
+  // TODO: 기존 앱 URL로 리다이렉트 (예: window.location.href = '...')
+}
 </script>
 
 <template>
@@ -355,16 +361,23 @@ function onBannerTouchEnd(e) {
           @click="onCardClick(card.key)"
           @pointerdown="onCardPointerDown($event, card.key)"
         >
-          <span class="menu-title">{{ card.title }}</span>
-          <span class="menu-sub">{{ card.sub }}</span>
-          <span class="menu-arrow" :class="{ open: active === card.key }" />
-          <CardIcon :name="card.key" class="card-icon" />
+          <div class="card-top">
+            <div class="card-text">
+              <span class="menu-title">{{ card.title }}</span>
+              <span class="menu-sub">{{ card.sub }}</span>
+            </div>
+            <CardIcon :name="card.key" class="card-icon" />
+          </div>
+          <div class="card-spacer" />
+          <div class="card-bot">
+            <span class="menu-arrow" :class="{ open: active === card.key }" />
+          </div>
         </button>
       </div>
 
       <!-- 이 행의 카드가 선택됐을 때만 확장 패널 -->
       <Transition name="panel">
-        <div v-if="isRowActive(row)" class="content-panel card">
+        <div v-if="isRowActive(row)" class="content-panel ez-card">
 
           <!-- IoT -->
           <template v-if="active === 'iot'">
@@ -377,9 +390,9 @@ function onBannerTouchEnd(e) {
                   <span v-if="d.onlyOn && !d.value" class="only-hint">켜기만 가능</span>
                 </p>
               </div>
-              <label class="switch">
+              <label class="ez-switch">
                 <input type="checkbox" v-model="d.value" @change="onIotToggle(d)" />
-                <span class="slider" />
+                <span class="ez-slider" />
               </label>
             </div>
           </template>
@@ -421,8 +434,8 @@ function onBannerTouchEnd(e) {
                 <p class="ticket-alert-title">입장권이 필요해요</p>
                 <p class="ticket-alert-desc">{{ ticketAlert }} 이용을 위해 입장권을 구매해 주세요.</p>
                 <div class="ticket-alert-actions">
-                  <a :href="OFFICE_PHONE" class="btn btn-primary ticket-call-btn">📞 관리사무소 전화</a>
-                  <button class="btn btn-outline ticket-close-btn" @click="dismissTicketAlert">닫기</button>
+                  <a :href="OFFICE_PHONE" class="ez-btn ez-btn-primary ticket-call-btn">📞 관리사무소 전화</a>
+                  <button class="ez-btn ez-btn-outline ticket-close-btn" @click="dismissTicketAlert">닫기</button>
                 </div>
               </div>
             </Transition>
@@ -457,7 +470,7 @@ function onBannerTouchEnd(e) {
                 <span class="slot-avail">{{ s.full ? '마감' : '가능' }}</span>
               </button>
             </div>
-            <button class="btn btn-primary btn-full" style="margin-top:16px" @click="submitBooking">예약 신청</button>
+            <button class="ez-btn ez-btn-primary ez-btn-full" style="margin-top:16px" @click="submitBooking">예약 신청</button>
             </template>
           </template>
 
@@ -501,25 +514,25 @@ function onBannerTouchEnd(e) {
               <span class="fee-total-label">합계</span>
               <span class="fee-total-amount">{{ formatKRW(fee.total) }}</span>
             </div>
-            <button class="btn btn-primary btn-full" style="margin-top:16px" @click="showToast('납부 페이지로 이동합니다.')">납부하기</button>
+            <button class="ez-btn ez-btn-primary ez-btn-full" style="margin-top:16px" @click="showToast('납부 페이지로 이동합니다.')">납부하기</button>
           </template>
 
           <!-- 방문차량 -->
           <template v-else-if="active === 'car'">
             <p class="panel-title">방문차량 등록</p>
-            <div class="form-group">
-              <label class="form-label">차량번호</label>
-              <input class="form-input" v-model="car.plate" placeholder="예) 12가 3456" maxlength="12" />
+            <div class="ez-form-group">
+              <label class="ez-form-label">차량번호</label>
+              <input class="ez-form-input" v-model="car.plate" placeholder="예) 12가 3456" maxlength="12" />
             </div>
-            <div class="form-group">
-              <label class="form-label">방문 일시</label>
-              <input class="form-input" type="datetime-local" v-model="car.datetime" />
+            <div class="ez-form-group">
+              <label class="ez-form-label">방문 일시</label>
+              <input class="ez-form-input" type="datetime-local" v-model="car.datetime" />
             </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">방문 목적 <span class="optional">(선택)</span></label>
-              <input class="form-input" v-model="car.purpose" placeholder="예) 가족 방문" maxlength="30" />
+            <div class="ez-form-group" style="margin-bottom:0">
+              <label class="ez-form-label">방문 목적 <span class="optional">(선택)</span></label>
+              <input class="ez-form-input" v-model="car.purpose" placeholder="예) 가족 방문" maxlength="30" />
             </div>
-            <button class="btn btn-primary btn-full" style="margin-top:16px" @click="submitCar">등록 완료</button>
+            <button class="ez-btn ez-btn-primary ez-btn-full" style="margin-top:16px" @click="submitCar">등록 완료</button>
           </template>
 
           <!-- 모두챗 -->
@@ -543,7 +556,7 @@ function onBannerTouchEnd(e) {
             </div>
             <div class="chat-input-row">
               <input class="form-input chat-input" v-model="chatInput" placeholder="메시지를 입력하세요" @keyup.enter="sendChat" />
-              <button class="btn btn-primary send-btn" @click="sendChat">전송</button>
+              <button class="ez-btn ez-btn-primary send-btn" @click="sendChat">전송</button>
             </div>
           </template>
 
@@ -558,24 +571,46 @@ function onBannerTouchEnd(e) {
         <span class="banner-section-title">이벤트</span>
         <span class="banner-section-more">전체보기</span>
       </div>
-      <div
-        class="banner-track-wrap"
-        ref="bannerTrackRef"
-        @touchstart.passive="onBannerTouchStart"
-        @touchend.passive="onBannerTouchEnd"
-      >
-        <div class="banner-track" :style="{ transform: `translateX(${-bannerIdx * 100}%)` }">
-          <div
-            v-for="b in banners" :key="b.id"
-            class="banner-card"
-            :style="{ background: `linear-gradient(135deg, ${b.grad[0]}, ${b.grad[1]})` }"
-          >
-            <div class="banner-deco1" />
-            <div class="banner-deco2" />
-            <span class="banner-tag">{{ b.tag }}</span>
-            <p class="banner-title">{{ b.title }}</p>
+      <div class="banner-slider">
+        <div
+          class="banner-track-wrap"
+          ref="bannerTrackRef"
+          @touchstart.passive="onBannerTouchStart"
+          @touchend.passive="onBannerTouchEnd"
+        >
+          <div class="banner-track" :style="{ transform: `translateX(${-bannerIdx * 100}%)` }">
+            <div
+              v-for="b in banners" :key="b.id"
+              class="banner-card"
+              :style="{ background: `linear-gradient(135deg, ${b.grad[0]}, ${b.grad[1]})` }"
+            >
+              <div class="banner-deco1" />
+              <div class="banner-deco2" />
+              <span class="banner-tag">{{ b.tag }}</span>
+              <p class="banner-title">{{ b.title }}</p>
+            </div>
           </div>
         </div>
+        <button
+          class="banner-arrow banner-arrow-prev"
+          :class="{ hidden: bannerIdx === 0 }"
+          @click="bannerIdx--"
+          aria-label="이전 배너"
+        >
+          <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
+            <path d="M8 2L2 8L8 14" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button
+          class="banner-arrow banner-arrow-next"
+          :class="{ hidden: bannerIdx === banners.length - 1 }"
+          @click="bannerIdx++"
+          aria-label="다음 배너"
+        >
+          <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
+            <path d="M2 2L8 8L2 14" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
       </div>
       <div class="banner-dots">
         <span
@@ -587,19 +622,29 @@ function onBannerTouchEnd(e) {
       </div>
     </section>
 
+    <!-- 간편모드 종료 -->
+    <button class="easy-mode-exit" @click="onEasyToggle">
+      일반 모드로 전환
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+
   </main>
 
   <!-- 드래그 고스트 -->
   <Teleport to="body">
     <div v-if="drag.on && drag.fromIdx >= 0" class="drag-ghost" :style="ghostStyle">
-      <span class="menu-title">{{ cards[drag.fromIdx].title }}</span>
-      <span class="menu-sub">{{ cards[drag.fromIdx].sub }}</span>
-      <CardIcon :name="cards[drag.fromIdx].key" class="card-icon" />
+      <div class="card-top">
+        <div class="card-text">
+          <span class="menu-title">{{ cards[drag.fromIdx].title }}</span>
+          <span class="menu-sub">{{ cards[drag.fromIdx].sub }}</span>
+        </div>
+        <CardIcon :name="cards[drag.fromIdx].key" class="card-icon" />
+      </div>
     </div>
   </Teleport>
 
-  <Transition name="toast">
-    <div v-if="toastShow" class="toast">{{ toastMsg }}</div>
+  <Transition name="ez-toast">
+    <div v-if="toastShow" class="ez-toast">{{ toastMsg }}</div>
   </Transition>
 </template>
 
@@ -619,8 +664,8 @@ function onBannerTouchEnd(e) {
 }
 
 .menu-card {
-  background: var(--c-card-bg);
-  border: 1px solid var(--c-card-border);
+  background: var(--ez-card-bg);
+  border: 1px solid var(--ez-card-border);
   border-radius: 18px;
   padding: 20px;
   cursor: pointer;
@@ -661,7 +706,7 @@ function onBannerTouchEnd(e) {
 .menu-card.is-over {
   border-color: #6B8EFF;
   border-width: 2px;
-  background: var(--c-date-cell-bg);
+  background: var(--ez-date-cell-bg);
 }
 .menu-card.active.is-over {
   background: #2a2680;
@@ -689,8 +734,13 @@ function onBannerTouchEnd(e) {
   height: 44px;
 }
 
-.menu-title { font-size: 17px; font-weight: 700; color: var(--c-text-primary); line-height: 1.3; transition: color .3s; }
-.menu-sub   { font-size: 12px; color: var(--c-text-secondary); font-weight: 400; transition: color .3s; }
+.card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.menu-title { font-size: var(--ez-font-menu-title); font-weight: 700; color: var(--ez-text-primary); line-height: 1.3; transition: color .3s; }
+.menu-sub   { font-size: var(--ez-font-menu-sub); color: var(--ez-text-secondary); font-weight: 400; transition: color .3s; }
 .menu-card.active .menu-title { color: #fff; }
 .menu-card.active .menu-sub   { color: #D7DDF5; }
 
@@ -720,7 +770,7 @@ function onBannerTouchEnd(e) {
 /* ── 드래그 고스트 ── */
 .drag-ghost {
   position: fixed;
-  background: var(--c-ghost-bg);
+  background: var(--ez-ghost-bg);
   border: 2px solid #6B8EFF;
   border-radius: 20px;
   padding: 20px 16px 16px;
@@ -739,29 +789,29 @@ function onBannerTouchEnd(e) {
 
 /* ── 콘텐츠 패널 ── */
 .content-panel {
-  background: var(--c-panel-bg);
+  background: var(--ez-panel-bg);
   border-radius: 18px;
   padding: 24px 20px;
   box-shadow: 0 4px 16px rgba(100, 120, 200, 0.12);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--c-panel-border);
+  border: 1px solid var(--ez-panel-border);
   transition: background .3s, border-color .3s;
 }
 .panel-title {
-  font-size: 16px; font-weight: 700; color: var(--c-text-primary);
+  font-size: 16px; font-weight: 700; color: var(--ez-text-primary);
   margin-bottom: 22px; transition: color .3s;
 }
 
 /* ── IoT ── */
 .toggle-row {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 0; border-bottom: 1px solid var(--c-divider);
+  padding: 18px 0; border-bottom: 1px solid var(--ez-divider);
 }
 .toggle-row:last-child { border-bottom: none; }
-.toggle-label { font-size: 15px; font-weight: 600; color: var(--c-text-primary); transition: color .3s; }
+.toggle-label { font-size: 15px; font-weight: 600; color: var(--ez-text-primary); transition: color .3s; }
 .toggle-state { font-size: 12px; font-weight: 500; color: #aaa; margin-top: 3px; transition: color .2s; }
-.toggle-state.on { color: var(--c-text-primary); }
+.toggle-state.on { color: var(--ez-text-primary); }
 .only-hint { font-size: 11px; color: #e0e0e0; margin-left: 4px; font-weight: 400; }
 
 /* ── Chips ── */
@@ -769,8 +819,8 @@ function onBannerTouchEnd(e) {
 .chip-row { display: flex; flex-wrap: wrap; gap: 7px; }
 .chip {
   padding: 8px 14px; border-radius: 20px;
-  border: 1.5px solid var(--c-chip-border); background: var(--c-chip-bg);
-  font-size: 13px; font-weight: 600; color: var(--c-chip-text);
+  border: 1.5px solid var(--ez-chip-border); background: var(--ez-chip-bg);
+  font-size: 13px; font-weight: 600; color: var(--ez-chip-text);
   cursor: pointer; font-family: inherit; transition: all .15s;
 }
 .chip.active { background: #3A4AA3; color: #fff; border-color: #3A4AA3; }
@@ -880,8 +930,8 @@ function onBannerTouchEnd(e) {
   gap: 4px;
   padding: 8px 10px;
   border-radius: 12px;
-  border: 1.5px solid var(--c-date-cell-border);
-  background: var(--c-date-cell-bg);
+  border: 1.5px solid var(--ez-date-cell-border);
+  background: var(--ez-date-cell-bg);
   cursor: pointer;
   font-family: inherit;
   transition: all .15s;
@@ -903,12 +953,12 @@ function onBannerTouchEnd(e) {
 .date-dow {
   font-size: 11px;
   font-weight: 600;
-  color: var(--c-text-secondary);
+  color: var(--ez-text-secondary);
 }
 .date-num {
   font-size: 15px;
   font-weight: 700;
-  color: var(--c-text-primary);
+  color: var(--ez-text-primary);
 }
 .date-cell.selected .date-dow { color: #D5DCF8; }
 .date-cell.selected .date-num { color: #fff; }
@@ -920,9 +970,9 @@ function onBannerTouchEnd(e) {
 .slot-btn {
   display: flex; flex-direction: column; align-items: center;
   padding: 10px 2px; border-radius: 10px;
-  border: 1.5px solid var(--c-slot-border); background: var(--c-slot-bg);
+  border: 1.5px solid var(--ez-slot-border); background: var(--ez-slot-bg);
   cursor: pointer; font-size: 12px; font-weight: 600;
-  font-family: inherit; color: var(--c-slot-text); line-height: 1.4; transition: all .15s;
+  font-family: inherit; color: var(--ez-slot-text); line-height: 1.4; transition: all .15s;
 }
 .slot-btn.full     { background: #fafafa; color: #ddd; cursor: not-allowed; border-color: #f0f0f0; }
 .slot-btn.selected { background: #3A4AA3; color: #fff; border-color: #3A4AA3; }
@@ -932,7 +982,7 @@ function onBannerTouchEnd(e) {
 
 /* ── Notices ── */
 .notice-item {
-  padding: 14px 0; border-bottom: 1px solid var(--c-divider); cursor: pointer;
+  padding: 14px 0; border-bottom: 1px solid var(--ez-divider); cursor: pointer;
 }
 .notice-item:last-child { border-bottom: none; }
 .notice-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
@@ -944,11 +994,11 @@ function onBannerTouchEnd(e) {
 .notice-tag.urgent { background: #fff0f0; color: #e53e3e; }
 .notice-tag.info   { background: #ebf4ff; color: #2b6cb0; }
 .notice-tag.gen    { background: #f5f5f5; color: #888; }
-.notice-title-text { font-size: 14px; font-weight: 600; color: var(--c-notice-text); line-height: 1.4; transition: color .3s; }
+.notice-title-text { font-size: 14px; font-weight: 600; color: var(--ez-notice-text); line-height: 1.4; transition: color .3s; }
 .notice-date { font-size: 11px; color: #aaa; white-space: nowrap; flex-shrink: 0; padding-top: 2px; }
 .notice-body {
-  margin-top: 10px; font-size: 13px; color: var(--c-notice-body-text); line-height: 1.65;
-  padding: 12px 14px; background: var(--c-notice-body-bg); border-radius: 8px; transition: background .3s, color .3s;
+  margin-top: 10px; font-size: 13px; color: var(--ez-notice-body-text); line-height: 1.65;
+  padding: 12px 14px; background: var(--ez-notice-body-bg); border-radius: 8px; transition: background .3s, color .3s;
 }
 
 /* ── 관리비 ── */
@@ -958,9 +1008,9 @@ function onBannerTouchEnd(e) {
   align-items: flex-start;
   margin-bottom: 14px;
 }
-.fee-due { font-size: 12px; color: var(--c-text-secondary); margin-top: 3px; }
+.fee-due { font-size: 12px; color: var(--ez-text-secondary); margin-top: 3px; }
 .fee-total-wrap { text-align: right; }
-.fee-total { font-size: 20px; font-weight: 700; color: var(--c-fee-text); letter-spacing: -0.5px; transition: color .3s; }
+.fee-total { font-size: 20px; font-weight: 700; color: var(--ez-fee-text); letter-spacing: -0.5px; transition: color .3s; }
 .fee-status {
   display: inline-block;
   margin-top: 4px;
@@ -972,24 +1022,24 @@ function onBannerTouchEnd(e) {
   color: #DC2626;
 }
 .fee-status.paid { background: #DCFCE7; color: #16A34A; }
-.fee-divider { height: 1px; background: var(--c-fee-divider); margin-bottom: 12px; transition: background .3s; }
+.fee-divider { height: 1px; background: var(--ez-fee-divider); margin-bottom: 12px; transition: background .3s; }
 .fee-items { display: flex; flex-direction: column; gap: 10px; }
 .fee-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.fee-label  { font-size: 14px; color: var(--c-fee-label); transition: color .3s; }
-.fee-amount { font-size: 14px; font-weight: 600; color: var(--c-fee-text); transition: color .3s; }
+.fee-label  { font-size: 14px; color: var(--ez-fee-label); transition: color .3s; }
+.fee-amount { font-size: 14px; font-weight: 600; color: var(--ez-fee-text); transition: color .3s; }
 .fee-total-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: 14px;
   padding-top: 12px;
-  border-top: 1.5px solid var(--c-divider);
+  border-top: 1.5px solid var(--ez-divider);
 }
-.fee-total-label  { font-size: 14px; font-weight: 700; color: var(--c-fee-text); transition: color .3s; }
+.fee-total-label  { font-size: 14px; font-weight: 700; color: var(--ez-fee-text); transition: color .3s; }
 .fee-total-amount { font-size: 17px; font-weight: 700; color: #3A4AA3; }
 
 /* ── 방문차량 ── */
@@ -1004,16 +1054,16 @@ function onBannerTouchEnd(e) {
 .msg-row { display: flex; align-items: flex-end; gap: 8px; }
 .msg-row.me { flex-direction: row-reverse; }
 .avatar {
-  width: 28px; height: 28px; background: var(--c-avatar-bg); border-radius: 50%;
+  width: 28px; height: 28px; background: var(--ez-avatar-bg); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; color: var(--c-avatar-text); flex-shrink: 0; transition: background .3s, color .3s;
+  font-size: 11px; font-weight: 700; color: var(--ez-avatar-text); flex-shrink: 0; transition: background .3s, color .3s;
 }
 .sender-name { font-size: 11px; color: #aaa; margin-bottom: 4px; padding-left: 2px; }
 .bubble {
   padding: 10px 13px; border-radius: 14px;
   font-size: 14px; line-height: 1.5; word-break: break-word; max-width: 210px;
 }
-.bubble.other { background: var(--c-bubble-other-bg); color: var(--c-bubble-other-text); border-bottom-left-radius: 4px; transition: background .3s, color .3s; }
+.bubble.other { background: var(--ez-bubble-other-bg); color: var(--ez-bubble-other-text); border-bottom-left-radius: 4px; transition: background .3s, color .3s; }
 .bubble.me    { background: #3A4AA3; color: #fff; border-bottom-right-radius: 4px; }
 .msg-time { font-size: 11px; color: #aaa; flex-shrink: 0; }
 .me-time  { align-self: flex-end; }
@@ -1027,6 +1077,9 @@ function onBannerTouchEnd(e) {
   flex-direction: column;
   gap: 10px;
 }
+.banner-slider {
+  position: relative;
+}
 .banner-section-header {
   display: flex;
   justify-content: space-between;
@@ -1035,16 +1088,39 @@ function onBannerTouchEnd(e) {
 .banner-section-title {
   font-size: 15px;
   font-weight: 700;
-  color: var(--c-text-primary);
+  color: var(--ez-text-primary);
   transition: color .3s;
 }
 .banner-section-more {
   font-size: 12px;
   font-weight: 500;
-  color: var(--c-text-secondary);
+  color: var(--ez-text-secondary);
   cursor: pointer;
   transition: color .3s;
 }
+.banner-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.28);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: background .15s, opacity .2s;
+}
+.banner-arrow:active { background: rgba(0, 0, 0, 0.45); }
+.banner-arrow.hidden { opacity: 0; pointer-events: none; }
+.banner-arrow-prev { left: 10px; }
+.banner-arrow-next { right: 10px; }
+
 .banner-track-wrap {
   width: 100%;
   overflow: hidden;
@@ -1119,6 +1195,25 @@ function onBannerTouchEnd(e) {
   background: #34449C;
 }
 
+/* ── 간편모드 종료 ── */
+.easy-mode-exit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ez-text-secondary);
+  cursor: pointer;
+  transition: color .2s;
+}
+.easy-mode-exit:active { color: var(--ez-text-primary); }
+
 /* ── Transitions ── */
 .panel-enter-active { transition: opacity .2s ease, transform .2s ease; }
 .panel-leave-active { transition: opacity .15s ease, transform .15s ease; }
@@ -1128,6 +1223,6 @@ function onBannerTouchEnd(e) {
 .expand-enter-active, .expand-leave-active { transition: opacity .2s, max-height .2s ease; overflow: hidden; max-height: 200px; }
 .expand-enter-from, .expand-leave-to       { opacity: 0; max-height: 0; }
 
-.toast-enter-active { animation: toastIn .2s ease; }
-.toast-leave-active { animation: toastOut .3s ease forwards; }
+.ez-toast-enter-active { animation: ezToastIn .2s ease; }
+.ez-toast-leave-active { animation: ezToastOut .3s ease forwards; }
 </style>
