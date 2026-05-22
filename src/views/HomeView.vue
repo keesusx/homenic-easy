@@ -1,1224 +1,1132 @@
 <script setup>
-import { ref, reactive, computed, watch, nextTick } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useToast } from '../composables/useToast.js'
-import CardIcon from '../components/CardIcon.vue'
 
 const { toastMsg, toastShow, showToast } = useToast()
 
-// ── 선택된 섹션 ──────────────────────────────────────────────
+// ── 활성 섹션 ─────────────────────────────────────────
 const active = ref(null)
-function select(key) {
+
+function toggle(key) {
   active.value = active.value === key ? null : key
 }
 
-// ── 카드 목록 (flat, 순서 변경 가능) ─────────────────────────────
-const cards = reactive([
-  { key: 'iot',     title: '우리집 제어', sub: '조명 · 냉방 · 방범' },
-  { key: 'booking', title: '시설 예약', sub: '커뮤니티 예약' },
-  { key: 'notice',  title: '공지사항',  sub: '아파트 공지' },
-  { key: 'car',     title: '방문차량',  sub: '차량 등록' },
-  { key: 'fee',  title: '관리비',  sub: '이번달 납부 현황' },
-  { key: 'chat', title: '모두챗', sub: '입주민 채팅' },
+// ── 글자 크기 ─────────────────────────────────────────
+const fontScale = ref(1)
+const SCALE_MIN = 0.85
+const SCALE_MAX = 1.35
+const SCALE_STEP = 0.1
+
+function changeFontSize(delta) {
+  const next = Math.round((fontScale.value + delta) * 100) / 100
+  fontScale.value = Math.max(SCALE_MIN, Math.min(SCALE_MAX, next))
+}
+
+const fontSizeLabel = computed(() => {
+  if (fontScale.value <= 0.9) return '작게'
+  if (fontScale.value >= 1.25) return '아주 크게'
+  if (fontScale.value >= 1.1) return '크게'
+  return '보통'
+})
+
+// ── IoT 기기 ──────────────────────────────────────────
+const iotDevices = reactive([
+  { key: 'living-light', label: '거실 조명', value: true,  confirmOff: false },
+  { key: 'bed-light',    label: '안방 조명', value: false, confirmOff: false },
+  { key: 'boiler',       label: '보일러',    value: true,  confirmOff: true },
+  { key: 'gas',          label: '가스 차단', value: false, confirmOff: false },
 ])
 
-// 행별 카드 구성 (computed)
-const rows = computed(() => {
-  const result = []
-  let i = 0
-  while (i < cards.length) {
-    if (cards[i].full) {
-      result.push([cards[i]])
-      i++
-    } else if (i + 1 < cards.length && !cards[i + 1].full) {
-      result.push([cards[i], cards[i + 1]])
-      i += 2
-    } else {
-      result.push([cards[i]])
-      i++
+function iotStatus(d) {
+  const on = d.value
+  if (d.key.includes('light')) return on ? '현재 조명이 켜져 있습니다' : '현재 조명이 꺼져 있습니다'
+  if (d.key === 'boiler')      return on ? '현재 보일러가 켜져 있습니다' : '현재 보일러가 꺼져 있습니다'
+  if (d.key === 'gas')         return on ? '현재 가스가 차단되어 있습니다' : '현재 가스가 열려 있습니다'
+  return ''
+}
+
+const iotSummary = computed(() => {
+  const names = iotDevices.map(d => d.label)
+  return `${names[0]}, ${names[1]} 외 ${names.length - 2}개`
+})
+
+// ── 팝업 ──────────────────────────────────────────────
+const popup = ref(null)
+
+function toggleIot(device) {
+  if (device.value && device.confirmOff) {
+    popup.value = {
+      type: 'boiler-off',
+      device,
+      title: '보일러를 끄시겠습니까?',
+      body: '보일러를 끄면 난방이 중지됩니다.\n계속하시겠습니까?',
+      confirmLabel: '끄기',
     }
-  }
-  return result
-})
-
-function cardIdx(key) { return cards.findIndex(c => c.key === key) }
-function rowOf(key)   { return rows.value.find(row => row.some(c => c.key === key)) }
-function isRowActive(row) { return row.some(c => c.key === active.value) }
-
-// ── Drag-to-reorder ───────────────────────────────────────────────
-const drag = reactive({
-  on: false, fromIdx: -1, overIdx: -1,
-  ghostLeft: 0, ghostTop: 0, ghostW: 0, ghostH: 0,
-  offX: 0, offY: 0, startX: 0, startY: 0,
-})
-let lpTimer = null
-let dragJustEnded = false
-
-const ghostStyle = computed(() => ({
-  left:   drag.ghostLeft + 'px',
-  top:    drag.ghostTop  + 'px',
-  width:  drag.ghostW    + 'px',
-  height: drag.ghostH    + 'px',
-}))
-
-function onCardPointerDown(e, key) {
-  drag.startX = e.clientX
-  drag.startY = e.clientY
-  const el = e.currentTarget
-
-  lpTimer = setTimeout(() => {
-    const rect = el.getBoundingClientRect()
-    Object.assign(drag, {
-      on: true, fromIdx: cardIdx(key), overIdx: -1,
-      ghostLeft: rect.left, ghostTop: rect.top,
-      ghostW: rect.width,   ghostH: rect.height,
-      offX: e.clientX - rect.left, offY: e.clientY - rect.top,
-    })
-    active.value = null
-    navigator.vibrate?.(30)
-  }, 500)
-}
-
-function onMainPointerMove(e) {
-  if (!drag.on) {
-    if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 8)
-      clearTimeout(lpTimer)
     return
   }
-  e.preventDefault()
+  device.value = !device.value
+  showToast(`${device.label} ${device.value ? 'ON' : 'OFF'}`)
+}
 
-  drag.ghostLeft = e.clientX - drag.offX
-  drag.ghostTop  = e.clientY - drag.offY
-
-  const under  = document.elementFromPoint(e.clientX, e.clientY)
-  const cardEl = under?.closest?.('[data-card-key]')
-  if (cardEl) {
-    const idx = cardIdx(cardEl.dataset.cardKey)
-    drag.overIdx = idx !== drag.fromIdx ? idx : -1
-  } else {
-    drag.overIdx = -1
+function confirmPopup() {
+  if (!popup.value) return
+  if (popup.value.type === 'boiler-off') {
+    popup.value.device.value = false
+    showToast('보일러가 꺼졌습니다')
+  } else if (popup.value.type === 'car-delete') {
+    const idx = recentCars.findIndex(c => c.id === popup.value.car.id)
+    if (idx >= 0) recentCars.splice(idx, 1)
+    showToast('차량이 삭제되었습니다')
   }
+  popup.value = null
 }
 
-function onMainPointerUp() {
-  clearTimeout(lpTimer)
-  if (!drag.on) return
-
-  if (drag.overIdx >= 0) {
-    const a = drag.fromIdx, b = drag.overIdx
-    const tmp = { ...cards[a] }
-    cards.splice(a, 1, { ...cards[b] })
-    cards.splice(b, 1, tmp)
-  }
-
-  drag.on = false
-  drag.fromIdx = -1
-  drag.overIdx = -1
-  dragJustEnded = true
-  setTimeout(() => { dragJustEnded = false }, 50)
+function cancelPopup() {
+  popup.value = null
 }
 
-function onCardClick(key) {
-  if (dragJustEnded || drag.on) return
-  select(key)
-}
-
-// ── 1. 홈 IoT ────────────────────────────────────────────────
-const iot = reactive([
-  { key: 'light',    label: '조명', value: false, onlyOn: false },
-  { key: 'ac',       label: '냉방', value: false, onlyOn: false },
-  { key: 'security', label: '방범', value: false, onlyOn: true  },
-])
-function onIotToggle(d) {
-  if (d.onlyOn && !d.value) {
-    d.value = true
-    showToast('방범 모드는 앱에서 해제할 수 없습니다.')
-    return
-  }
-  showToast(`${d.label} ${d.value ? 'ON' : 'OFF'}`)
-}
-
-// ── 2. 시설 예약 ─────────────────────────────────────────────
-const facilities = reactive([
-  { name: '헬스장', expiry: '2026-04-30' },
-  { name: '수영장', expiry: '2026-04-08' },
-  { name: '골프장', expiry: null },
-  { name: 'BBQ장',  expiry: null },
-  { name: '독서실', expiry: '2026-04-10' },
-])
-
-function hasPass(fac) {
-  if (!fac.expiry) return false
-  return new Date(fac.expiry) >= new Date(new Date().toDateString())
-}
-
-function daysLeft(fac) {
-  if (!fac.expiry) return 0
-  const diff = new Date(fac.expiry) - new Date(new Date().toDateString())
-  return Math.max(0, Math.ceil(diff / 86400000))
-}
-
-const expiringFacilities = computed(() =>
-  facilities.filter(f => hasPass(f) && daysLeft(f) <= 7)
-)
-
-const selFacility = ref('헬스장')
-const ticketAlert = ref(null)
-
-function selectFacility(fac) {
-  if (!hasPass(fac)) {
-    ticketAlert.value = fac.name
-    return
-  }
-  ticketAlert.value = null
-  selFacility.value = fac.name
-  selSlot.value = null
-}
-
-function dismissTicketAlert() {
-  ticketAlert.value = null
-}
-const selDate     = ref(null)
-const selSlot     = ref(null)
-const slotSeed    = reactive({})
-const rawSlots    = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00']
-
-// 시설별 휴관 요일 (0=일, 1=월, ..., 6=토)
-const facilityClosedDays = {
-  '헬스장': [1],
-  '수영장': [1, 2],
-  '골프장': [0, 1],
-  'BBQ장':  [1, 2, 3, 4, 5],
-  '독서실': [0],
-}
-
-const OFFICE_PHONE = 'tel:021234567'
-
-// 향후 14일 날짜 목록 (시설별 활성 여부 포함)
-const DAYS_KO = ['일','월','화','수','목','금','토']
-const bookingDays = computed(() => {
-  const days = []
-  const base = new Date()
-  base.setHours(0, 0, 0, 0)
-  const closed = facilityClosedDays[selFacility.value] || []
-  for (let i = 0; i < 14; i++) {
-    const d = new Date(base)
-    d.setDate(base.getDate() + i)
-    const dateStr = d.toISOString().slice(0, 10)
-    const dow = d.getDay()
-    days.push({
-      dateStr,
-      day:       d.getDate(),
-      dow:       DAYS_KO[dow],
-      isSat:     dow === 6,
-      isSun:     dow === 0,
-      available: !closed.includes(dow),
-    })
-  }
-  return days
+// ── 방문차량 ──────────────────────────────────────────
+const carDateOptions = computed(() => {
+  const today = new Date()
+  const fmt = (d) => `${d.getMonth() + 1}.${d.getDate()}`
+  const d1 = new Date(today); d1.setDate(today.getDate() + 1)
+  const d2 = new Date(today); d2.setDate(today.getDate() + 2)
+  return [
+    { key: 'today',    label: '오늘',  sub: fmt(today) },
+    { key: 'tomorrow', label: '내일',  sub: fmt(d1) },
+    { key: 'dayAfter', label: '모레',  sub: fmt(d2) },
+  ]
 })
+const carDate  = ref('today')
+const carPlate = ref('')
 
-// 시설 변경 시 → 선택 날짜가 휴관이면 첫 가능일로 이동
-watch(selFacility, () => {
-  selSlot.value = null
-  const closed = facilityClosedDays[selFacility.value] || []
-  const cur = selDate.value ? new Date(selDate.value) : null
-  if (!cur || closed.includes(cur.getDay())) {
-    const first = bookingDays.value.find(d => d.available)
-    selDate.value = first ? first.dateStr : null
-  }
-}, { immediate: true })
-
-function fullSlots(fac, date) {
-  const k = `${fac}:${date}`
-  if (!slotSeed[k]) slotSeed[k] = rawSlots.filter((_, i) => (i * 7 + fac.length) % 3 === 0)
-  return slotSeed[k]
-}
-const slots = computed(() =>
-  rawSlots.map(t => ({ time: t, full: fullSlots(selFacility.value, selDate.value).includes(t) }))
-)
-function selectDate(day) {
-  if (!day.available) return
-  selDate.value = day.dateStr
-  selSlot.value = null
-}
-function submitBooking() {
-  if (!selSlot.value) { showToast('시간대를 선택해 주세요.'); return }
-  showToast(`${selFacility.value} ${selSlot.value} 예약 완료`)
-  selSlot.value = null
-}
-
-// ── 3. 공지사항 ───────────────────────────────────────────────
-const notices = reactive([
-  { id:1, tag:'긴급', tc:'urgent', title:'4월 5일(토) 단수 예정 (오전 10~12시)', date:'04.03', body:'노후 배관 교체 공사로 인해 4월 5일(토) 오전 10시~12시 전 세대 단수가 예정되어 있습니다. 미리 물을 받아 두시기 바랍니다.', open:false },
-  { id:2, tag:'안내', tc:'info',   title:'2026년 관리비 납부 마감일 안내',       date:'04.01', body:'4월 관리비 납부 마감은 4월 25일(금)입니다. 자동이체·가상계좌·앱 내 납부 가능합니다.', open:false },
-  { id:3, tag:'일반', tc:'gen',    title:'엘리베이터 정기 점검 일정 공지',       date:'03.28', body:'4월 10일(목) 오전 9시~11시 엘리베이터 정기 점검이 진행됩니다.', open:false },
-  { id:4, tag:'일반', tc:'gen',    title:'재활용 분리수거 요일 변경 안내',       date:'03.20', body:'4월부터 분리수거 요일이 화·목·토로 변경됩니다.', open:false },
+const recentCars = reactive([
+  { id: 1, plate: '12가 3456', date: '5.20 (오늘)' },
+  { id: 2, plate: '34나 7890', date: '5.18 (토)' },
 ])
+let nextCarId = 3
 
-// ── 4. 관리비 ─────────────────────────────────────────────────
-const fee = reactive({
-  month: '2026년 4월',
-  total: 287500,
-  dueDate: '4월 25일(금)',
-  paid: false,
-  items: [
-    { label: '일반관리비', amount: 45000 },
-    { label: '청소비',     amount: 32000 },
-    { label: '경비비',     amount: 58000 },
-    { label: '승강기유지비', amount: 12000 },
-    { label: '수선유지비', amount: 28000 },
-    { label: '전기료',     amount: 67500 },
-    { label: '수도료',     amount: 25000 },
-    { label: '난방비',     amount: 20000 },
-  ],
-})
-function formatKRW(n) {
-  return n.toLocaleString('ko-KR') + '원'
-}
-
-// ── 5. 방문차량 ───────────────────────────────────────────────
-const car = reactive({ plate: '', datetime: '', purpose: '' })
 function submitCar() {
-  if (!car.plate.trim()) { showToast('차량번호를 입력해 주세요.'); return }
-  if (!car.datetime)     { showToast('방문 일시를 선택해 주세요.'); return }
-  showToast(`${car.plate} 등록 완료`)
-  Object.assign(car, { plate: '', datetime: '', purpose: '' })
+  if (!carPlate.value.trim()) {
+    showToast('차량 번호를 입력해 주세요')
+    return
+  }
+  const opt = carDateOptions.value.find(o => o.key === carDate.value)
+  recentCars.unshift({
+    id: nextCarId++,
+    plate: carPlate.value.trim(),
+    date: `${opt.sub} (${opt.label})`,
+  })
+  showToast(`${carPlate.value.trim()} 등록 완료`)
+  carPlate.value = ''
 }
 
-// ── 5. 모두챗 ─────────────────────────────────────────────────
-const chatWrap  = ref(null)
-const chatInput = ref('')
-const messages  = reactive([
-  { id:1, me:false, sender:'박이웃 (301호)', text:'혹시 어제 엘리베이터에 우산 두고 가신 분 계세요? 경비실에 맡겨뒀어요 😊', time:'08:42' },
-  { id:2, me:false, sender:'김이웃 (502호)', text:'아 저예요! 감사합니다 ㅠㅠ', time:'08:45' },
-  { id:3, me:false, sender:'이이웃 (401호)', text:'내일 지하주차장 A구역 도색공사 있다고 하네요. 차 미리 빼두세요~', time:'09:10' },
-  { id:4, me:false, sender:'최이웃 (105호)', text:'알려주셔서 감사해요! 몰랐네요', time:'09:12' },
+function deleteCar(car) {
+  popup.value = {
+    type: 'car-delete',
+    car,
+    title: '차량을 삭제하시겠습니까?',
+    body: '등록된 방문 차량 정보가\n삭제됩니다.',
+    confirmLabel: '삭제',
+  }
+}
+
+// ── 공지사항 ──────────────────────────────────────────
+const notices = reactive([
+  { id: 1, title: '분리수거 요일이 바뀌어요', sub: '6월부터 화/금 저녁 6시까지' },
+  { id: 2, title: '4월 5일(토) 단수 예정', sub: '오전 10시~12시 전 세대 단수' },
+  { id: 3, title: '관리비 납부 마감 안내', sub: '4월 25일(금)까지 납부해 주세요' },
 ])
-let nextMsgId = 4
-function getTime() {
-  const d = new Date()
-  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+const noticeIdx = ref(0)
+
+function prevNotice() {
+  noticeIdx.value = noticeIdx.value > 0 ? noticeIdx.value - 1 : notices.length - 1
 }
-async function sendChat() {
-  const txt = chatInput.value.trim()
-  if (!txt) return
-  messages.push({ id: nextMsgId++, me: true, sender: '나 (502호)', text: txt, time: getTime() })
-  chatInput.value = ''
-  await nextTick()
-  if (chatWrap.value) chatWrap.value.scrollTop = chatWrap.value.scrollHeight
+function nextNotice() {
+  noticeIdx.value = noticeIdx.value < notices.length - 1 ? noticeIdx.value + 1 : 0
 }
 
-// ── 배너 (이벤트) ──────────────────────────────────────────────
-const banners = reactive([
-  { id: 1, tag: '🎉 이벤트', title: '4월 관리비 납부하고\n스타벅스 쿠폰 받아가세요!', grad: ['#3A4AA3', '#1E2D7D'] },
-  { id: 2, tag: '🏋️ 시설',  title: '헬스장 이용권 봄맞이\n특별 할인 중!',           grad: ['#1E6B4A', '#0D4530'] },
-  { id: 3, tag: '🌸 봄 이벤트', title: '입주민 사진 공모전\n4월 30일까지 참여하세요', grad: ['#7C3AA3', '#4B1E7D'] },
+// ── 시설 예약 ─────────────────────────────────────────
+const facilities = ['헬스장', '수영장', '골프장', 'BBQ장', '독서실']
+const selFacility  = ref('헬스장')
+const bookingDate  = ref('today')
+const bookingSlot  = ref(null)
+const timeSlots    = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00']
+const closedSlots  = ['12:00','15:00']
+
+function submitBooking() {
+  if (!bookingSlot.value) {
+    showToast('시간대를 선택해 주세요')
+    return
+  }
+  showToast(`${selFacility.value} ${bookingSlot.value} 예약 완료`)
+  bookingSlot.value = null
+}
+
+// ── 이벤트 배너 ───────────────────────────────────────
+const events = reactive([
+  { id: 1, title: '관리비 납부하고\n스타벅스 쿠폰 받아가세요!', sub: '4월 이벤트' },
+  { id: 2, title: '헬스장 이용권 봄맞이\n특별 할인 중!', sub: '시설 이벤트' },
+  { id: 3, title: '입주민 사진 공모전\n참여하세요!', sub: '봄 이벤트' },
+  { id: 4, title: '주차장 도색공사 안내', sub: '시설 공지' },
+  { id: 5, title: '커뮤니티 라운지 오픈!', sub: '신규 시설' },
 ])
-const bannerIdx = ref(0)
+const eventIdx = ref(0)
 
-const bannerTrackRef = ref(null)
-let bTouchStartX = 0
-
-function onBannerTouchStart(e) {
-  bTouchStartX = e.touches[0].clientX
+function prevEvent() {
+  if (eventIdx.value > 0) eventIdx.value--
 }
-function onBannerTouchEnd(e) {
-  const dx = e.changedTouches[0].clientX - bTouchStartX
-  if (dx < -40 && bannerIdx.value < banners.length - 1) bannerIdx.value++
-  else if (dx > 40 && bannerIdx.value > 0) bannerIdx.value--
-}
-
-// ── 간편모드 토글 ──────────────────────────────────────────────
-function onEasyToggle() {
-  showToast('기존 홈닉 앱으로 전환합니다.')
-  // TODO: 기존 앱 URL로 리다이렉트 (예: window.location.href = '...')
+function nextEvent() {
+  if (eventIdx.value < events.length - 1) eventIdx.value++
 }
 </script>
 
 <template>
-  <main
-    class="home"
-    :class="{ 'dragging-mode': drag.on }"
-    @pointermove="onMainPointerMove"
-    @pointerup="onMainPointerUp"
-    @pointercancel="onMainPointerUp"
-  >
+  <main class="home" :style="{ '--font-scale': fontScale }">
 
-    <template v-for="(row, ri) in rows" :key="ri">
-
-      <!-- 카드 행 -->
-      <div class="card-row">
-        <button
-          v-for="card in row" :key="card.key"
-          class="menu-card"
-          :class="{
-            active:       active === card.key,
-            full:         card.full,
-            'is-dragging': drag.on && cardIdx(card.key) === drag.fromIdx,
-            'is-over':    drag.on && cardIdx(card.key) === drag.overIdx,
-          }"
-          :data-card-key="card.key"
-          @click="onCardClick(card.key)"
-          @pointerdown="onCardPointerDown($event, card.key)"
-        >
-          <div class="card-top">
-            <div class="card-text">
-              <span class="menu-title">{{ card.title }}</span>
-              <span class="menu-sub">{{ card.sub }}</span>
-            </div>
-            <CardIcon :name="card.key" class="card-icon" />
-          </div>
-          <div class="card-spacer" />
-          <div class="card-bot">
-            <span class="menu-arrow" :class="{ open: active === card.key }" />
-          </div>
-        </button>
-      </div>
-
-      <!-- 이 행의 카드가 선택됐을 때만 확장 패널 -->
-      <Transition name="panel">
-        <div v-if="isRowActive(row)" class="content-panel ez-card">
-
-          <!-- IoT -->
-          <template v-if="active === 'iot'">
-            <p class="panel-title">우리집 제어</p>
-            <div v-for="d in iot" :key="d.key" class="toggle-row">
-              <div>
-                <p class="toggle-label">{{ d.label }}</p>
-                <p class="toggle-state" :class="{ on: d.value }">
-                  {{ d.value ? 'ON' : 'OFF' }}
-                  <span v-if="d.onlyOn && !d.value" class="only-hint">켜기만 가능</span>
-                </p>
-              </div>
-              <label class="ez-switch">
-                <input type="checkbox" v-model="d.value" @change="onIotToggle(d)" />
-                <span class="ez-slider" />
-              </label>
-            </div>
-          </template>
-
-          <!-- 시설 예약 -->
-          <template v-else-if="active === 'booking'">
-            <p class="panel-title">커뮤니티시설 예약</p>
-            <p class="field-label">시설</p>
-            <div class="chip-row">
-              <button
-                v-for="fac in facilities" :key="fac.name"
-                class="chip"
-                :class="{
-                  active:  selFacility === fac.name && hasPass(fac),
-                  locked:  !hasPass(fac),
-                }"
-                @click="selectFacility(fac)"
-              >
-                <span v-if="!hasPass(fac)" class="chip-lock">🔒</span>
-                {{ fac.name }}
-              </button>
-            </div>
-
-            <!-- 만료 임박 안내 (선택된 시설만, 입장권 없음 안내가 없을 때만) -->
-            <div v-if="!ticketAlert && expiringFacilities.some(f => f.name === selFacility)" class="expiry-warn">
-              <div class="expiry-warn-left">
-                <span class="expiry-icon">🕐</span>
-                <div class="expiry-texts">
-                  <span class="expiry-sub">{{ selFacility }} 입장권 만료 예정</span>
-                  <span class="expiry-main">{{ daysLeft(facilities.find(f => f.name === selFacility)) }}일 후 만료됩니다</span>
-                </div>
-              </div>
-              <span class="expiry-badge">D-{{ daysLeft(facilities.find(f => f.name === selFacility)) }}</span>
-            </div>
-
-            <!-- 입장권 없음 안내 -->
-            <Transition name="expand">
-              <div v-if="ticketAlert" class="ticket-alert">
-                <p class="ticket-alert-title">입장권이 필요해요</p>
-                <p class="ticket-alert-desc">{{ ticketAlert }} 이용을 위해 입장권을 구매해 주세요.</p>
-                <div class="ticket-alert-actions">
-                  <a :href="OFFICE_PHONE" class="ez-btn ez-btn-primary ticket-call-btn">📞 관리사무소 전화</a>
-                  <button class="ez-btn ez-btn-outline ticket-close-btn" @click="dismissTicketAlert">닫기</button>
-                </div>
-              </div>
-            </Transition>
-
-            <template v-if="!ticketAlert">
-            <p class="field-label" style="margin-top:16px">날짜</p>
-            <div class="date-strip">
-              <button
-                v-for="day in bookingDays" :key="day.dateStr"
-                class="date-cell"
-                :class="{
-                  selected:    selDate === day.dateStr,
-                  unavailable: !day.available,
-                  sat:         day.isSat,
-                  sun:         day.isSun,
-                }"
-                :disabled="!day.available"
-                @click="selectDate(day)"
-              >
-                <span class="date-dow">{{ day.dow }}</span>
-                <span class="date-num">{{ day.day }}</span>
-              </button>
-            </div>
-            <p class="field-label" style="margin-top:16px">시간</p>
-            <div class="slot-grid">
-              <button
-                v-for="s in slots" :key="s.time"
-                class="slot-btn" :class="{ full: s.full, selected: selSlot === s.time }"
-                @click="!s.full && (selSlot = s.time)"
-              >
-                {{ s.time }}<br/>
-                <span class="slot-avail">{{ s.full ? '마감' : '가능' }}</span>
-              </button>
-            </div>
-            <button class="ez-btn ez-btn-primary ez-btn-full" style="margin-top:16px" @click="submitBooking">예약 신청</button>
-            </template>
-          </template>
-
-          <!-- 공지사항 -->
-          <template v-else-if="active === 'notice'">
-            <p class="panel-title">공지사항</p>
-            <div v-for="n in notices" :key="n.id" class="notice-item" @click="n.open = !n.open">
-              <div class="notice-row">
-                <div class="notice-left">
-                  <span class="notice-tag" :class="n.tc">{{ n.tag }}</span>
-                  <span class="notice-title-text">{{ n.title }}</span>
-                </div>
-                <span class="notice-date">{{ n.date }}</span>
-              </div>
-              <Transition name="expand">
-                <p v-if="n.open" class="notice-body">{{ n.body }}</p>
-              </Transition>
-            </div>
-          </template>
-
-          <!-- 관리비 -->
-          <template v-else-if="active === 'fee'">
-            <div class="fee-header">
-              <div>
-                <p class="panel-title" style="margin-bottom:2px">{{ fee.month }} 관리비</p>
-                <p class="fee-due">납부기한 · {{ fee.dueDate }}</p>
-              </div>
-              <div class="fee-total-wrap">
-                <p class="fee-total">{{ formatKRW(fee.total) }}</p>
-                <span class="fee-status" :class="{ paid: fee.paid }">{{ fee.paid ? '납부완료' : '미납' }}</span>
-              </div>
-            </div>
-            <div class="fee-divider" />
-            <div class="fee-items">
-              <div v-for="item in fee.items" :key="item.label" class="fee-row">
-                <span class="fee-label">{{ item.label }}</span>
-                <span class="fee-amount">{{ formatKRW(item.amount) }}</span>
-              </div>
-            </div>
-            <div class="fee-total-row">
-              <span class="fee-total-label">합계</span>
-              <span class="fee-total-amount">{{ formatKRW(fee.total) }}</span>
-            </div>
-            <button class="ez-btn ez-btn-primary ez-btn-full" style="margin-top:16px" @click="showToast('납부 페이지로 이동합니다.')">납부하기</button>
-          </template>
-
-          <!-- 방문차량 -->
-          <template v-else-if="active === 'car'">
-            <p class="panel-title">방문차량 등록</p>
-            <div class="ez-form-group">
-              <label class="ez-form-label">차량번호</label>
-              <input class="ez-form-input" v-model="car.plate" placeholder="예) 12가 3456" maxlength="12" />
-            </div>
-            <div class="ez-form-group">
-              <label class="ez-form-label">방문 일시</label>
-              <input class="ez-form-input" type="datetime-local" v-model="car.datetime" />
-            </div>
-            <div class="ez-form-group" style="margin-bottom:0">
-              <label class="ez-form-label">방문 목적 <span class="optional">(선택)</span></label>
-              <input class="ez-form-input" v-model="car.purpose" placeholder="예) 가족 방문" maxlength="30" />
-            </div>
-            <button class="ez-btn ez-btn-primary ez-btn-full" style="margin-top:16px" @click="submitCar">등록 완료</button>
-          </template>
-
-          <!-- 모두챗 -->
-          <template v-else-if="active === 'chat'">
-            <p class="panel-title">모두챗</p>
-            <div class="chat-wrap" ref="chatWrap">
-              <div v-for="m in messages" :key="m.id" class="msg-row" :class="{ me: m.me }">
-                <template v-if="!m.me">
-                  <div class="avatar">{{ m.sender[0] }}</div>
-                  <div>
-                    <p class="sender-name">{{ m.sender }}</p>
-                    <div class="bubble other">{{ m.text }}</div>
-                  </div>
-                  <span class="msg-time">{{ m.time }}</span>
-                </template>
-                <template v-else>
-                  <span class="msg-time me-time">{{ m.time }}</span>
-                  <div class="bubble me">{{ m.text }}</div>
-                </template>
-              </div>
-            </div>
-            <div class="chat-input-row">
-              <input class="form-input chat-input" v-model="chatInput" placeholder="메시지를 입력하세요" @keyup.enter="sendChat" />
-              <button class="ez-btn ez-btn-primary send-btn" @click="sendChat">전송</button>
-            </div>
-          </template>
-
-        </div>
-      </Transition>
-
-    </template>
-
-    <!-- 배너 (이벤트) -->
-    <section class="banner-section">
-      <div class="banner-section-header">
-        <span class="banner-section-title">이벤트</span>
-        <span class="banner-section-more">전체보기</span>
-      </div>
-      <div
-        class="banner-track-wrap"
-        ref="bannerTrackRef"
-        @touchstart.passive="onBannerTouchStart"
-        @touchend.passive="onBannerTouchEnd"
-      >
-        <div class="banner-track" :style="{ transform: `translateX(${-bannerIdx * 100}%)` }">
-          <div
-            v-for="b in banners" :key="b.id"
-            class="banner-card"
-            :style="{ background: `linear-gradient(135deg, ${b.grad[0]}, ${b.grad[1]})` }"
-          >
-            <div class="banner-deco1" />
-            <div class="banner-deco2" />
-            <span class="banner-tag">{{ b.tag }}</span>
-            <p class="banner-title">{{ b.title }}</p>
-          </div>
-        </div>
-      </div>
-      <div class="banner-nav">
-        <button
-          class="banner-nav-btn"
-          :class="{ invisible: bannerIdx === 0 }"
-          @click="bannerIdx--"
-          aria-label="이전 배너"
-        >
-          <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
-            <path d="M8 2L2 8L8 14" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- ━━━ 공지 섹션 ━━━ -->
+    <section class="section">
+      <span class="section-label">공지</span>
+      <div class="notice-card">
+        <button class="notice-nav-btn" @click="prevNotice" aria-label="이전 공지">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M8 2L4 6l4 4" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <div class="banner-dots">
-          <span
-            v-for="(b, i) in banners" :key="b.id"
-            class="banner-dot"
-            :class="{ active: i === bannerIdx }"
-            @click="bannerIdx = i"
-          />
+        <div class="notice-content">
+          <p class="notice-title">{{ notices[noticeIdx].title }}</p>
+          <p class="notice-sub">{{ notices[noticeIdx].sub }}</p>
         </div>
-        <button
-          class="banner-nav-btn"
-          :class="{ invisible: bannerIdx === banners.length - 1 }"
-          @click="bannerIdx++"
-          aria-label="다음 배너"
-        >
-          <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
-            <path d="M2 2L8 8L2 14" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <button class="notice-nav-btn" @click="nextNotice" aria-label="다음 공지">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M4 2l4 4-4 4" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
       </div>
     </section>
 
-    <!-- 간편모드 종료 -->
-    <button class="easy-mode-exit" @click="onEasyToggle">
-      일반 모드로 전환
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
+    <!-- ━━━ 간편모드 섹션 ━━━ -->
+    <section class="section">
+      <span class="section-label">간편모드</span>
 
+      <!-- ── 집 리모컨 ── -->
+      <div class="feature-card" :class="{ expanded: active === 'iot' }">
+        <div class="card-top">
+          <div class="icon-circle">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+          <div class="card-info">
+            <h3 class="card-title">집 리모컨</h3>
+            <p class="card-desc">{{ iotSummary }}</p>
+          </div>
+        </div>
+
+        <!-- 사용하기 버튼 (접힌 상태) -->
+        <div v-if="active !== 'iot'" class="card-action">
+          <button class="action-btn use" @click="toggle('iot')">사용하기</button>
+        </div>
+
+        <!-- IoT 확장 패널 -->
+        <div v-if="active === 'iot'" class="card-body">
+          <div class="inner-panel">
+            <div
+              v-for="(d, di) in iotDevices"
+              :key="d.key"
+              class="iot-row"
+              :class="{ 'no-border': di === iotDevices.length - 1 }"
+            >
+              <div class="iot-info">
+                <span class="iot-label">{{ d.label }}</span>
+                <span class="iot-status">{{ iotStatus(d) }}</span>
+              </div>
+              <button
+                class="iot-toggle"
+                :class="d.value ? 'on' : 'off'"
+                @click="toggleIot(d)"
+              >
+                {{ d.value ? '끄키' : '켜키' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- 되돌아가기 버튼 (확장 하단) -->
+          <button class="action-btn back full" @click="toggle('iot')">되돌아가기</button>
+        </div>
+      </div>
+
+      <!-- ── 방문 차량 ── -->
+      <div class="feature-card" :class="{ expanded: active === 'car' }">
+        <div class="card-top">
+          <div class="icon-circle">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9L18 10l-2.7-3.4A2 2 0 0 0 13.7 6H10a2 2 0 0 0-1.6.8L5.9 10l-2.4 1.1C2.7 11.7 2 12.5 2 13.4V16c0 .6.4 1 1 1h2"/>
+              <circle cx="7" cy="17" r="2"/>
+              <circle cx="17" cy="17" r="2"/>
+            </svg>
+          </div>
+          <div class="card-info">
+            <h3 class="card-title">방문 차량</h3>
+            <p class="card-desc">방문 차량을 등록하세요</p>
+          </div>
+        </div>
+
+        <!-- 사용하기 버튼 (접힌 상태) -->
+        <div v-if="active !== 'car'" class="card-action">
+          <button class="action-btn use" @click="toggle('car')">사용하기</button>
+        </div>
+
+        <!-- 차량등록 확장 패널 -->
+        <div v-if="active === 'car'" class="card-body">
+          <div class="inner-panel">
+            <!-- 방문 날짜 -->
+            <div class="field-group">
+              <label class="field-label">방문 날짜</label>
+              <div class="date-chips">
+                <button
+                  v-for="opt in carDateOptions"
+                  :key="opt.key"
+                  class="date-chip"
+                  :class="{ active: carDate === opt.key }"
+                  @click="carDate = opt.key"
+                >
+                  <span class="date-chip-main">{{ opt.label }}</span>
+                  <span class="date-chip-sub">{{ opt.sub }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 차량 번호 -->
+            <div class="field-group">
+              <label class="field-label">차량 번호</label>
+              <input
+                class="form-input"
+                v-model="carPlate"
+                placeholder="차량 번호를 입력해 주세요"
+                maxlength="12"
+              />
+            </div>
+
+            <button class="btn btn-primary btn-full submit-btn" @click="submitCar">
+              등록하기
+            </button>
+
+            <!-- 최근 등록 차량 -->
+            <div v-if="recentCars.length" class="recent-section">
+              <span class="recent-label">최근 등록 차량</span>
+              <div
+                v-for="car in recentCars"
+                :key="car.id"
+                class="recent-car"
+              >
+                <div class="recent-car-info">
+                  <span class="recent-car-plate">{{ car.plate }}</span>
+                  <span class="recent-car-date">{{ car.date }}</span>
+                </div>
+                <button class="recent-car-del" @click="deleteCar(car)" aria-label="삭제">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 되돌아가기 버튼 (확장 하단) -->
+          <button class="action-btn back full" @click="toggle('car')">되돌아가기</button>
+        </div>
+      </div>
+
+      <!-- ── 시설 예약 ── -->
+      <div class="feature-card" :class="{ expanded: active === 'booking' }">
+        <div class="card-top">
+          <div class="icon-circle">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <div class="card-info">
+            <h3 class="card-title">시설 예약</h3>
+            <p class="card-desc">헬스장 · 게스트룸 · 독서실</p>
+          </div>
+        </div>
+
+        <!-- 사용하기 버튼 (접힌 상태) -->
+        <div v-if="active !== 'booking'" class="card-action">
+          <button class="action-btn use" @click="toggle('booking')">사용하기</button>
+        </div>
+
+        <!-- 시설예약 확장 패널 -->
+        <div v-if="active === 'booking'" class="card-body">
+          <div class="inner-panel">
+            <!-- 시설 선택 -->
+            <div class="field-group">
+              <label class="field-label">시설 선택</label>
+              <div class="facility-chips">
+                <button
+                  v-for="f in facilities"
+                  :key="f"
+                  class="facility-chip"
+                  :class="{ active: selFacility === f }"
+                  @click="selFacility = f"
+                >
+                  {{ f }}
+                </button>
+              </div>
+            </div>
+
+            <!-- 날짜 선택 -->
+            <div class="field-group">
+              <label class="field-label">날짜</label>
+              <div class="date-chips">
+                <button
+                  v-for="opt in carDateOptions"
+                  :key="opt.key"
+                  class="date-chip"
+                  :class="{ active: bookingDate === opt.key }"
+                  @click="bookingDate = opt.key"
+                >
+                  <span class="date-chip-main">{{ opt.label }}</span>
+                  <span class="date-chip-sub">{{ opt.sub }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 시간 선택 -->
+            <div class="field-group">
+              <label class="field-label">시간</label>
+              <div class="slot-grid">
+                <button
+                  v-for="t in timeSlots"
+                  :key="t"
+                  class="slot-btn"
+                  :class="{
+                    selected: bookingSlot === t,
+                    closed: closedSlots.includes(t),
+                  }"
+                  :disabled="closedSlots.includes(t)"
+                  @click="bookingSlot = t"
+                >
+                  {{ t }}
+                  <span class="slot-status">{{ closedSlots.includes(t) ? '마감' : '가능' }}</span>
+                </button>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-full submit-btn" @click="submitBooking">
+              예약 신청
+            </button>
+          </div>
+
+          <!-- 되돌아가기 버튼 (확장 하단) -->
+          <button class="action-btn back full" @click="toggle('booking')">되돌아가기</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ━━━ 이벤트 섹션 ━━━ -->
+    <section class="section">
+      <span class="section-label">이벤트</span>
+      <div class="event-card">
+        <p class="event-title">{{ events[eventIdx].title }}</p>
+        <button class="event-detail-btn">자세히보기</button>
+      </div>
+      <div class="event-nav">
+        <button class="event-nav-side" @click="prevEvent" :disabled="eventIdx <= 0">
+          <span class="event-nav-label">이전</span>
+          <span class="event-nav-circle">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M8 2L4 6l4 4" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        </button>
+        <span class="event-nav-page">{{ eventIdx + 1 }}/{{ events.length }}</span>
+        <button class="event-nav-side" @click="nextEvent" :disabled="eventIdx >= events.length - 1">
+          <span class="event-nav-circle">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M4 2l4 4-4 4" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="event-nav-label">다음</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ━━━ 글자 크기 섹션 ━━━ -->
+    <section class="section font-section">
+      <span class="section-label">글자 크기</span>
+      <div class="font-control">
+        <button
+          class="font-btn"
+          :disabled="fontScale <= SCALE_MIN"
+          @click="changeFontSize(-SCALE_STEP)"
+        >
+          A<span class="font-btn-arrow">-</span>
+        </button>
+        <span class="font-current">{{ fontSizeLabel }}</span>
+        <button
+          class="font-btn"
+          :disabled="fontScale >= SCALE_MAX"
+          @click="changeFontSize(SCALE_STEP)"
+        >
+          A<span class="font-btn-arrow">+</span>
+        </button>
+      </div>
+    </section>
+
+    <div style="height: 40px" />
   </main>
 
-  <!-- 드래그 고스트 -->
+  <!-- ━━━ 확인 팝업 ━━━ -->
   <Teleport to="body">
-    <div v-if="drag.on && drag.fromIdx >= 0" class="drag-ghost" :style="ghostStyle">
-      <div class="card-top">
-        <div class="card-text">
-          <span class="menu-title">{{ cards[drag.fromIdx].title }}</span>
-          <span class="menu-sub">{{ cards[drag.fromIdx].sub }}</span>
+    <Transition name="fade">
+      <div v-if="popup" class="popup-overlay" @click.self="cancelPopup">
+        <div class="popup-card">
+          <h3 class="popup-title">{{ popup.title }}</h3>
+          <p class="popup-body">{{ popup.body }}</p>
+          <div class="popup-actions">
+            <button class="popup-btn cancel" @click="cancelPopup">아니요</button>
+            <button class="popup-btn confirm" @click="confirmPopup">{{ popup.confirmLabel }}</button>
+          </div>
         </div>
-        <CardIcon :name="cards[drag.fromIdx].key" class="card-icon" />
       </div>
-    </div>
+    </Transition>
   </Teleport>
 
-  <Transition name="ez-toast">
-    <div v-if="toastShow" class="ez-toast">{{ toastMsg }}</div>
+  <!-- 토스트 -->
+  <Transition name="toast">
+    <div v-if="toastShow" class="toast">{{ toastMsg }}</div>
   </Transition>
 </template>
 
 <style scoped>
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   레이아웃
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .home {
-  padding: 24px 22px 96px;
+  padding: 12px 20px 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
 }
 
-/* ── 카드 행 ── */
-.card-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.menu-card {
-  background: var(--ez-card-bg);
-  border: 1px solid var(--ez-card-border);
-  border-radius: 18px;
-  padding: 20px;
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
+.section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-height: 110px;
-  position: relative;
-  transition: border-color .15s, background .3s, box-shadow .15s, color .3s;
-  box-shadow: 0 4px 12px rgba(100, 120, 200, 0.10);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  touch-action: none;
-  user-select: none;
-}
-.menu-card:hover  { border-color: rgba(180, 195, 255, 0.6); box-shadow: 0 4px 16px rgba(100, 120, 200, 0.14); }
-.menu-card:active { transform: scale(.98); }
-.menu-card.active {
-  background: #26306E;
-  border-color: #2A3578;
-  box-shadow: 0 4px 16px rgba(26, 31, 74, 0.17);
-}
-.menu-card.full {
-  grid-column: span 2;
-  min-height: 80px;
-  flex-direction: row;
-  align-items: center;
-  padding: 20px 24px;
-}
-
-/* 드래그 상태 */
-.menu-card.is-dragging {
-  opacity: 0.3;
-  border-style: dashed;
-}
-.menu-card.is-over {
-  border-color: #6B8EFF;
-  border-width: 2px;
-  background: var(--ez-date-cell-bg);
-}
-.menu-card.active.is-over {
-  background: #2a2680;
-  border-color: #8B9FFF;
-}
-
-/* ── 카드 아이콘 ── */
-.card-icon {
-  position: absolute;
-  right: 14px;
-  top: 14px;
-  width: 24px;
-  height: 24px;
-  color: #d4d4d4;
-  pointer-events: none;
-  transition: color .15s, opacity .15s;
-}
-.menu-card.active .card-icon {
-  color: rgba(255, 255, 255, 0.25);
-}
-.menu-card.full .card-icon {
-  top: 50%;
-  transform: translateY(-50%);
-  width: 44px;
-  height: 44px;
-}
-
-.card-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.menu-title { font-size: var(--ez-font-menu-title); font-weight: 700; color: var(--ez-text-primary); line-height: 1.3; transition: color .3s; }
-.menu-sub   { font-size: var(--ez-font-menu-sub); color: var(--ez-text-secondary); font-weight: 400; transition: color .3s; }
-.menu-card.active .menu-title { color: #fff; }
-.menu-card.active .menu-sub   { color: #D7DDF5; }
-
-.menu-arrow {
-  position: absolute; right: 14px; bottom: 14px;
-  width: 18px; height: 18px;
-  display: flex; align-items: center; justify-content: center;
-}
-.menu-card.full .menu-arrow { bottom: auto; top: 50%; transform: translateY(-50%); }
-.menu-arrow::after {
-  content: '';
-  display: block;
-  width: 7px; height: 7px;
-  border-right: 2px solid #C5CADF;
-  border-bottom: 2px solid #C5CADF;
-  transform: rotate(45deg);
-  transition: transform .2s, border-color .15s;
-}
-.menu-card.active .menu-arrow::after {
-  border-color: rgba(255,255,255,.4);
-  transform: rotate(-135deg);
-}
-.menu-card.full.active .menu-arrow::after {
-  transform: rotate(-135deg);
-}
-
-/* ── 드래그 고스트 ── */
-.drag-ghost {
-  position: fixed;
-  background: var(--ez-ghost-bg);
-  border: 2px solid #6B8EFF;
-  border-radius: 20px;
-  padding: 20px 16px 16px;
-  box-shadow: 0 12px 32px rgba(80, 100, 200, 0.28);
-  pointer-events: none;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  transform: scale(1.05);
-  transform-origin: center center;
-  opacity: 0.95;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-/* ── 콘텐츠 패널 ── */
-.content-panel {
-  background: var(--ez-panel-bg);
-  border-radius: 18px;
-  padding: 24px 20px;
-  box-shadow: 0 4px 16px rgba(100, 120, 200, 0.12);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--ez-panel-border);
-  transition: background .3s, border-color .3s;
-}
-.panel-title {
-  font-size: 16px; font-weight: 700; color: var(--ez-text-primary);
-  margin-bottom: 22px; transition: color .3s;
-}
-
-/* ── IoT ── */
-.toggle-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 0; border-bottom: 1px solid var(--ez-divider);
-}
-.toggle-row:last-child { border-bottom: none; }
-.toggle-label { font-size: 15px; font-weight: 600; color: var(--ez-text-primary); transition: color .3s; }
-.toggle-state { font-size: 12px; font-weight: 500; color: #aaa; margin-top: 3px; transition: color .2s; }
-.toggle-state.on { color: var(--ez-text-primary); }
-.only-hint { font-size: 11px; color: #e0e0e0; margin-left: 4px; font-weight: 400; }
-
-/* ── Chips ── */
-.field-label { font-size: 12px; font-weight: 600; color: #aaa; margin-bottom: 8px; }
-.chip-row { display: flex; flex-wrap: wrap; gap: 7px; }
-.chip {
-  padding: 8px 14px; border-radius: 20px;
-  border: 1.5px solid var(--ez-chip-border); background: var(--ez-chip-bg);
-  font-size: 13px; font-weight: 600; color: var(--ez-chip-text);
-  cursor: pointer; font-family: inherit; transition: all .15s;
-}
-.chip.active { background: #3A4AA3; color: #fff; border-color: #3A4AA3; }
-.chip.locked {
-  opacity: 0.4;
-  cursor: default;
-  background: #f5f6f8;
-  border-color: #e4e4e7;
-  color: #aaa;
-}
-.chip-lock { margin-right: 3px; font-size: 11px; }
-
-/* ── Expiry warning ── */
-.expiry-warn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #EEF2FF;
-  border: 1px solid #CFD8FF;
-  border-radius: 12px;
-  padding: 10px 12px;
   gap: 10px;
-}
-.expiry-warn-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.expiry-icon { font-size: 14px; }
-.expiry-texts {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.expiry-sub {
-  font-size: 11px;
-  font-weight: 600;
-  color: #475569;
-}
-.expiry-main {
-  font-size: 13px;
-  font-weight: 700;
-  color: #1E3A8A;
-}
-.expiry-badge {
-  font-size: 12px;
-  font-weight: 700;
-  color: #2F3DB8;
-  background: #DDE4FF;
-  border-radius: 999px;
-  padding: 4px 8px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-/* ── Ticket alert ── */
-.ticket-alert {
-  margin-top: 14px;
-  padding: 18px 16px;
-  background: #EEF2FF;
-  border: 1px solid #CFD8FF;
-  border-radius: 14px;
-  text-align: center;
-}
-.ticket-alert-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1E3A8A;
-  margin-bottom: 6px;
-}
-.ticket-alert-desc {
-  font-size: 13px;
-  color: #475569;
-  line-height: 1.5;
-  margin-bottom: 14px;
-}
-.ticket-alert-actions {
-  display: flex;
-  gap: 8px;
-}
-.ticket-call-btn {
-  flex: 1;
-  text-decoration: none;
-  font-size: 14px;
-  padding: 12px 0;
-}
-.ticket-close-btn {
-  padding: 12px 16px;
-  font-size: 14px;
-}
-
-/* ── Date strip ── */
-.date-strip {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: none;
-}
-.date-strip::-webkit-scrollbar { display: none; }
-
-.date-cell {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  border: 1.5px solid var(--ez-date-cell-border);
-  background: var(--ez-date-cell-bg);
-  cursor: pointer;
-  font-family: inherit;
-  transition: all .15s;
-  min-width: 44px;
-}
-.date-cell.sat .date-dow { color: #4B7BDB; }
-.date-cell.sun .date-dow { color: #E05252; }
-.date-cell.unavailable {
-  background: rgba(240, 241, 248, 0.5);
-  border-color: transparent;
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-.date-cell.selected {
-  background: #3A4AA3;
-  border-color: #3A4AA3;
-  box-shadow: 0 3px 10px rgba(47, 61, 184, 0.28);
-}
-.date-dow {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ez-text-secondary);
-}
-.date-num {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--ez-text-primary);
-}
-.date-cell.selected .date-dow { color: #D5DCF8; }
-.date-cell.selected .date-num { color: #fff; }
-
-/* ── Slot grid ── */
-.slot-grid {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px;
-}
-.slot-btn {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 10px 2px; border-radius: 10px;
-  border: 1.5px solid var(--ez-slot-border); background: var(--ez-slot-bg);
-  cursor: pointer; font-size: 12px; font-weight: 600;
-  font-family: inherit; color: var(--ez-slot-text); line-height: 1.4; transition: all .15s;
-}
-.slot-btn.full     { background: #fafafa; color: #ddd; cursor: not-allowed; border-color: #f0f0f0; }
-.slot-btn.selected { background: #3A4AA3; color: #fff; border-color: #3A4AA3; }
-.slot-avail { font-size: 10px; font-weight: 500; color: #aaa; }
-.slot-btn.full .slot-avail { color: #ddd; }
-.slot-btn.selected .slot-avail { color: #D5DCF8; }
-
-/* ── Notices ── */
-.notice-item {
-  padding: 14px 0; border-bottom: 1px solid var(--ez-divider); cursor: pointer;
-}
-.notice-item:last-child { border-bottom: none; }
-.notice-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-.notice-left { display: flex; flex-direction: column; gap: 5px; flex: 1; }
-.notice-tag {
-  display: inline-block; font-size: 10px; font-weight: 700;
-  padding: 2px 7px; border-radius: 4px; align-self: flex-start;
-}
-.notice-tag.urgent { background: #fff0f0; color: #e53e3e; }
-.notice-tag.info   { background: #ebf4ff; color: #2b6cb0; }
-.notice-tag.gen    { background: #f5f5f5; color: #888; }
-.notice-title-text { font-size: 14px; font-weight: 600; color: var(--ez-notice-text); line-height: 1.4; transition: color .3s; }
-.notice-date { font-size: 11px; color: #aaa; white-space: nowrap; flex-shrink: 0; padding-top: 2px; }
-.notice-body {
-  margin-top: 10px; font-size: 13px; color: var(--ez-notice-body-text); line-height: 1.65;
-  padding: 12px 14px; background: var(--ez-notice-body-bg); border-radius: 8px; transition: background .3s, color .3s;
-}
-
-/* ── 관리비 ── */
-.fee-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 14px;
-}
-.fee-due { font-size: 12px; color: var(--ez-text-secondary); margin-top: 3px; }
-.fee-total-wrap { text-align: right; }
-.fee-total { font-size: 20px; font-weight: 700; color: var(--ez-fee-text); letter-spacing: -0.5px; transition: color .3s; }
-.fee-status {
-  display: inline-block;
-  margin-top: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #FEE2E2;
-  color: #DC2626;
-}
-.fee-status.paid { background: #DCFCE7; color: #16A34A; }
-.fee-divider { height: 1px; background: var(--ez-fee-divider); margin-bottom: 12px; transition: background .3s; }
-.fee-items { display: flex; flex-direction: column; gap: 10px; }
-.fee-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.fee-label  { font-size: 14px; color: var(--ez-fee-label); transition: color .3s; }
-.fee-amount { font-size: 14px; font-weight: 600; color: var(--ez-fee-text); transition: color .3s; }
-.fee-total-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1.5px solid var(--ez-divider);
-}
-.fee-total-label  { font-size: 14px; font-weight: 700; color: var(--ez-fee-text); transition: color .3s; }
-.fee-total-amount { font-size: 17px; font-weight: 700; color: #3A4AA3; }
-
-/* ── 방문차량 ── */
-.optional { font-size: 12px; color: #bbb; font-weight: 400; }
-
-/* ── Chat ── */
-.chat-wrap {
-  height: 240px; overflow-y: auto;
-  display: flex; flex-direction: column; gap: 12px;
   margin-bottom: 12px;
 }
-.msg-row { display: flex; align-items: flex-end; gap: 8px; }
-.msg-row.me { flex-direction: row-reverse; }
-.avatar {
-  width: 28px; height: 28px; background: var(--ez-avatar-bg); border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; color: var(--ez-avatar-text); flex-shrink: 0; transition: background .3s, color .3s;
-}
-.sender-name { font-size: 11px; color: #aaa; margin-bottom: 4px; padding-left: 2px; }
-.bubble {
-  padding: 10px 13px; border-radius: 14px;
-  font-size: 14px; line-height: 1.5; word-break: break-word; max-width: 210px;
-}
-.bubble.other { background: var(--ez-bubble-other-bg); color: var(--ez-bubble-other-text); border-bottom-left-radius: 4px; transition: background .3s, color .3s; }
-.bubble.me    { background: #3A4AA3; color: #fff; border-bottom-right-radius: 4px; }
-.msg-time { font-size: 11px; color: #aaa; flex-shrink: 0; }
-.me-time  { align-self: flex-end; }
-.chat-input-row { display: flex; gap: 8px; }
-.chat-input { flex: 1; }
-.send-btn   { padding: 0 18px; font-size: 14px; white-space: nowrap; }
 
-/* ── 배너 ── */
-.banner-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.section-label {
+  font-family: var(--font-heading);
+  font-size: calc(18px * var(--font-scale));
+  font-weight: 600;
+  color: #666;
+  letter-spacing: -0.9px;
+  padding-left: 4px;
 }
-.banner-nav {
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   공지 카드
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.notice-card {
+  background: var(--c-notice-green);
+  border-radius: var(--card-radius);
+  padding: 24px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--card-shadow);
+}
+.notice-nav-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  background: #fff;
+  border: none;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .1s;
 }
-.banner-nav-btn {
-  width: 44px;
-  height: 44px;
+.notice-nav-btn:active { transform: scale(.9); }
+
+.notice-content {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+.notice-title {
+  font-family: var(--font-heading);
+  font-size: calc(22px * var(--font-scale));
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -1.2px;
+  line-height: 1.1;
+}
+.notice-sub {
+  font-family: var(--font-body);
+  font-size: calc(16px * var(--font-scale));
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: -0.8px;
+  margin-top: 8px;
+  line-height: 1.2;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   기능 카드 (공통)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.feature-card {
+  background: var(--c-card-bg);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  transition: background .3s ease;
+}
+.feature-card.expanded {
+  background: var(--c-card-expanded);
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 16px;
+}
+
+.icon-circle {
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  background: #fff;
   border-radius: 50%;
-  background: #26306E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.card-info {
+  flex: 1;
+  min-width: 0;
+}
+.card-title {
+  font-family: var(--font-heading);
+  font-size: calc(24px * var(--font-scale));
+  font-weight: 800;
+  color: #111;
+  letter-spacing: -1px;
+  line-height: 1.2;
+}
+.card-desc {
+  font-family: var(--font-body);
+  font-size: calc(16px * var(--font-scale));
+  font-weight: 500;
+  color: #666;
+  letter-spacing: -0.5px;
+  margin-top: 3px;
+}
+
+/* ── 카드 하단 액션 영역 ── */
+.card-action {
+  padding: 0 16px 18px;
+}
+
+/* ── 사용하기 / 되돌아가기 버튼 ── */
+.action-btn {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  border: none;
+  border-radius: var(--btn-radius);
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .1s;
+  width: 100%;
+  text-align: center;
+}
+.action-btn:active { transform: scale(.97); }
+
+.action-btn.use {
+  background: var(--c-btn-primary);
+  color: var(--c-btn-primary-text);
+  font-size: calc(22px * var(--font-scale));
+  padding: 16px;
+}
+.action-btn.back {
+  background: var(--c-btn-primary);
+  color: var(--c-btn-primary-text);
+  font-size: calc(22px * var(--font-scale));
+  padding: 16px;
+}
+.action-btn.back.full {
+  margin-top: 12px;
+}
+
+/* ── 확장 패널 본문 ── */
+.card-body {
+  padding: 0 16px 18px;
+  animation: slideDown .25s ease;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.inner-panel {
+  background: #fff;
+  border-radius: var(--panel-radius);
+  padding: 24px 20px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   IoT 패널
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.iot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--c-divider);
+}
+.iot-row.no-border { border-bottom: none; }
+
+.iot-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.iot-label {
+  font-family: var(--font-heading);
+  font-size: calc(22px * var(--font-scale));
+  font-weight: 800;
+  color: #111;
+  letter-spacing: -1.2px;
+}
+.iot-status {
+  font-family: var(--font-body);
+  font-size: calc(16px * var(--font-scale));
+  font-weight: 500;
+  color: #666;
+  letter-spacing: -0.8px;
+}
+
+.iot-toggle {
+  width: 75px;
+  border: none;
+  border-radius: var(--btn-radius);
+  padding: 12px 0;
+  font-family: var(--font-heading);
+  font-size: calc(18px * var(--font-scale));
+  font-weight: 800;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .1s;
+}
+.iot-toggle:active { transform: scale(.95); }
+.iot-toggle.on {
+  background: var(--c-btn-primary);
+  color: var(--c-btn-primary-text);
+}
+.iot-toggle.off {
+  background: var(--c-btn-secondary);
+  color: var(--c-btn-secondary-text);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   방문차량 패널
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.field-group {
+  margin-bottom: 20px;
+}
+.field-label {
+  font-family: var(--font-heading);
+  font-size: calc(16px * var(--font-scale));
+  font-weight: 700;
+  color: #444;
+  letter-spacing: -0.5px;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.date-chips {
+  display: flex;
+  gap: 8px;
+}
+.date-chip {
+  flex: 1;
+  background: #F5F5F5;
+  border: 2px solid transparent;
+  border-radius: var(--panel-radius);
+  padding: 12px 8px;
+  cursor: pointer;
+  text-align: center;
+  font-family: var(--font-heading);
+  -webkit-tap-highlight-color: transparent;
+  transition: all .15s;
+}
+.date-chip.active {
+  background: #111;
+  border-color: #111;
+}
+.date-chip-main {
+  display: block;
+  font-size: calc(20px * var(--font-scale));
+  font-weight: 800;
+  color: #111;
+  letter-spacing: -0.5px;
+}
+.date-chip.active .date-chip-main { color: #fff; }
+.date-chip-sub {
+  display: block;
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 500;
+  color: #999;
+  margin-top: 2px;
+}
+.date-chip.active .date-chip-sub { color: rgba(255,255,255,0.7); }
+
+.submit-btn {
+  font-size: calc(22px * var(--font-scale));
+  padding: 18px;
+  margin-top: 4px;
+}
+
+/* 최근 등록 차량 */
+.recent-section {
+  margin-top: 24px;
+  border-top: 1px solid var(--c-divider);
+  padding-top: 18px;
+}
+.recent-label {
+  font-family: var(--font-heading);
+  font-size: calc(16px * var(--font-scale));
+  font-weight: 700;
+  color: #888;
+  letter-spacing: -0.5px;
+  display: block;
+  margin-bottom: 12px;
+}
+.recent-car {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #F3F3F3;
+}
+.recent-car:last-child { border-bottom: none; }
+
+.recent-car-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.recent-car-plate {
+  font-family: var(--font-heading);
+  font-size: calc(20px * var(--font-scale));
+  font-weight: 800;
+  color: #111;
+  letter-spacing: -0.8px;
+}
+.recent-car-date {
+  font-family: var(--font-body);
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 500;
+  color: #999;
+}
+.recent-car-del {
+  background: none;
   border: none;
   cursor: pointer;
+  color: #bbb;
+  padding: 8px;
+  border-radius: 8px;
+  -webkit-tap-highlight-color: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  transition: background .15s, opacity .2s;
 }
-.banner-nav-btn:active { background: #1a2050; }
-.banner-nav-btn.invisible { opacity: 0; pointer-events: none; }
-.banner-section-header {
+.recent-car-del:hover { color: #888; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   시설 예약 패널
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.facility-chips {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
-.banner-section-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--ez-text-primary);
-  transition: color .3s;
-}
-.banner-section-more {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--ez-text-secondary);
+.facility-chip {
+  background: #F5F5F5;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  padding: 10px 16px;
   cursor: pointer;
-  transition: color .3s;
+  font-family: var(--font-heading);
+  font-size: calc(16px * var(--font-scale));
+  font-weight: 700;
+  color: #555;
+  -webkit-tap-highlight-color: transparent;
+  transition: all .15s;
+}
+.facility-chip.active {
+  background: #111;
+  color: #fff;
+  border-color: #111;
 }
 
-.banner-track-wrap {
-  width: 100%;
-  overflow: hidden;
-  border-radius: 18px;
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
 }
-.banner-track {
-  display: flex;
-  transition: transform .35s cubic-bezier(.4,0,.2,1);
+.slot-btn {
+  background: #F5F5F5;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  padding: 10px 4px;
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-size: calc(16px * var(--font-scale));
+  font-weight: 700;
+  color: #333;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: all .15s;
 }
-.banner-card {
-  flex-shrink: 0;
-  width: 100%;
-  height: 120px;
-  border-radius: 18px;
-  position: relative;
-  overflow: hidden;
-  padding: 18px;
-  box-sizing: border-box;
+.slot-btn.selected {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+.slot-btn.closed {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.slot-status {
+  display: block;
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 500;
+  color: #999;
+  margin-top: 2px;
+}
+.slot-btn.selected .slot-status { color: rgba(255,255,255,0.7); }
+.slot-btn.closed .slot-status { color: #c00; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   이벤트 카드
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.event-card {
+  background: var(--c-event-orange);
+  border-radius: var(--card-radius);
+  padding: 32px 20px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  gap: 6px;
+  align-items: center;
+  gap: 20px;
+  box-shadow: var(--card-shadow);
 }
-.banner-deco1 {
-  position: absolute;
-  width: 160px; height: 160px;
-  border-radius: 80px;
-  background: rgba(255,255,255,0.07);
-  top: -30px; right: 0px;
-  pointer-events: none;
-}
-.banner-deco2 {
-  position: absolute;
-  width: 100px; height: 100px;
-  border-radius: 50px;
-  background: rgba(255,255,255,0.04);
-  top: 50px; right: -10px;
-  pointer-events: none;
-}
-.banner-tag {
-  position: absolute;
-  top: 18px; left: 18px;
-  background: rgba(255,255,255,0.15);
+.event-title {
+  font-family: var(--font-heading);
+  font-size: calc(22px * var(--font-scale));
+  font-weight: 800;
   color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 20px;
+  letter-spacing: -1px;
+  line-height: 1.35;
+  white-space: pre-line;
+  text-align: center;
 }
-.banner-title {
-  font-size: 15px;
-  font-weight: 700;
+.event-detail-btn {
+  width: 100%;
+  max-width: 318px;
+  background: #8535DB;
   color: #fff;
+  border: none;
+  border-radius: var(--btn-radius);
+  padding: 20px;
+  font-family: var(--font-heading);
+  font-size: calc(22px * var(--font-scale));
+  font-weight: 800;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .1s;
+}
+.event-detail-btn:active { transform: scale(.97); }
+
+/* ── 이벤트 네비게이션 ── */
+.event-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 8px 0 0;
+}
+.event-nav-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  padding: 4px;
+}
+.event-nav-side:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.event-nav-label {
+  font-family: var(--font-body);
+  font-size: calc(18px * var(--font-scale));
+  font-weight: 500;
+  color: #666;
+}
+.event-nav-circle {
+  width: 32px;
+  height: 32px;
+  background: #EDEDED;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.event-nav-page {
+  font-family: var(--font-body);
+  font-size: calc(20px * var(--font-scale));
+  font-weight: 500;
+  color: #333;
+  min-width: 40px;
+  text-align: center;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   글자 크기
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.font-section {
+  margin-bottom: 0;
+}
+.font-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  background: var(--c-card-bg);
+  border-radius: var(--card-radius);
+  padding: 18px 24px;
+  box-shadow: var(--card-shadow);
+}
+.font-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid #ddd;
+  background: #fff;
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 800;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: all .15s;
+}
+.font-btn:active { transform: scale(.93); }
+.font-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.font-btn-arrow {
+  font-size: 16px;
+  margin-left: 1px;
+}
+.font-current {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
+  color: #666;
+  min-width: 70px;
+  text-align: center;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   확인 팝업
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+.popup-card {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 320px;
+  overflow: hidden;
+  animation: popupIn .2s ease;
+}
+@keyframes popupIn {
+  from { opacity: 0; transform: scale(.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.popup-title {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 800;
+  color: #111;
+  text-align: center;
+  padding: 32px 24px 8px;
+  letter-spacing: -0.8px;
+}
+.popup-body {
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 500;
+  color: #666;
+  text-align: center;
+  padding: 4px 24px 28px;
   line-height: 1.45;
   white-space: pre-line;
 }
-.banner-dots {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  align-items: center;
-}
-.banner-dot {
-  width: 6px; height: 6px;
-  border-radius: 3px;
-  background: #C5CADF;
-  cursor: pointer;
-  transition: width .25s, background .25s;
-}
-.banner-dot.active {
-  width: 20px;
-  background: #34449C;
-}
 
-/* ── 간편모드 종료 ── */
-.easy-mode-exit {
+.popup-actions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  width: 100%;
-  background: none;
+  border-top: 1px solid #eee;
+}
+.popup-btn {
+  flex: 1;
+  height: 56px;
   border: none;
-  padding: 8px;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--ez-text-secondary);
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 800;
   cursor: pointer;
-  transition: color .2s;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter .1s;
 }
-.easy-mode-exit:active { color: var(--ez-text-primary); }
-
-/* ── Transitions ── */
-.panel-enter-active { transition: opacity .2s ease, transform .2s ease; }
-.panel-leave-active { transition: opacity .15s ease, transform .15s ease; }
-.panel-enter-from   { opacity: 0; transform: translateY(-6px); }
-.panel-leave-to     { opacity: 0; transform: translateY(-4px); }
-
-.expand-enter-active, .expand-leave-active { transition: opacity .2s, max-height .2s ease; overflow: hidden; max-height: 200px; }
-.expand-enter-from, .expand-leave-to       { opacity: 0; max-height: 0; }
-
-.ez-toast-enter-active { animation: ezToastIn .2s ease; }
-.ez-toast-leave-active { animation: ezToastOut .3s ease forwards; }
+.popup-btn:active { filter: brightness(0.9); }
+.popup-btn.cancel {
+  background: #DDDDDD;
+  color: #555;
+  border-radius: 0 0 0 16px;
+}
+.popup-btn.confirm {
+  background: #111;
+  color: #fff;
+  border-radius: 0 0 16px 0;
+}
 </style>
