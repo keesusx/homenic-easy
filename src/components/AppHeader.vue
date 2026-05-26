@@ -78,8 +78,8 @@ const hasNotif = ref(true)
   background: var(--c-badge-red, #BA1A1A);
   border-radius: 50%;
   position: absolute;
-  top: 0px;
-  right: 0px;
+  top: -4px;
+  right: -6px;
   border: 2px solid #fff;
   display: flex;
   align-items: center;
