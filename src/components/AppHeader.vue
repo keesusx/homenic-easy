@@ -73,13 +73,13 @@ const hasNotif = ref(true)
 }
 
 .notif-badge {
-  width: 12px;
-  height: 12px;
+  width: 20px;
+  height: 20px;
   background: var(--c-badge-red, #BA1A1A);
   border-radius: 50%;
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 0px;
+  right: 0px;
   border: 2px solid #fff;
   display: flex;
   align-items: center;
@@ -88,10 +88,10 @@ const hasNotif = ref(true)
 
 .notif-count {
   font-family: 'Noto Sans', sans-serif;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 500;
   color: #fff;
   line-height: 1;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.6px;
 }
 </style>
