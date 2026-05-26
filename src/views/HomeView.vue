@@ -255,7 +255,7 @@ function nextEvent() {
                 :class="d.value ? 'on' : 'off'"
                 @click="toggleIot(d)"
               >
-                {{ d.value ? '끄키' : '켜키' }}
+                {{ d.value ? '끄기' : '켜기' }}
               </button>
             </div>
           </div>
