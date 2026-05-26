@@ -213,14 +213,22 @@ function nextEvent() {
       <div class="feature-card" :class="{ expanded: active === 'iot' }">
         <div class="card-top">
           <div class="icon-circle">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <polyline points="9 22 9 12 15 12 15 22"/>
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+              <!-- 지붕 (노란색) -->
+              <path d="M22 4L4 18h36L22 4z" fill="#FFC82E"/>
+              <!-- 벽 (남색) -->
+              <rect x="10" y="18" width="24" height="18" rx="2" fill="#0F3654"/>
+              <!-- 창문 (흰색) -->
+              <rect x="14" y="22" width="5" height="5" rx="1" fill="#fff"/>
+              <rect x="25" y="22" width="5" height="5" rx="1" fill="#fff"/>
+              <!-- 문 (흰색) -->
+              <rect x="18" y="29" width="8" height="7" rx="1" fill="#fff"/>
             </svg>
+            <span class="icon-badge">3</span>
           </div>
           <div class="card-info">
             <h3 class="card-title">집 리모컨</h3>
-            <p class="card-desc">{{ iotSummary }}</p>
+            <p class="card-desc">조명·난방·가스</p>
           </div>
         </div>
 
@@ -261,15 +269,26 @@ function nextEvent() {
       <div class="feature-card" :class="{ expanded: active === 'car' }">
         <div class="card-top">
           <div class="icon-circle">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9L18 10l-2.7-3.4A2 2 0 0 0 13.7 6H10a2 2 0 0 0-1.6.8L5.9 10l-2.4 1.1C2.7 11.7 2 12.5 2 13.4V16c0 .6.4 1 1 1h2"/>
-              <circle cx="7" cy="17" r="2"/>
-              <circle cx="17" cy="17" r="2"/>
+            <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
+              <!-- 차체 상단 (회색) -->
+              <path d="M12 22l3-8h18l3 8H12z" fill="#535E69"/>
+              <!-- 차체 하단 (검정) -->
+              <rect x="8" y="22" width="32" height="12" rx="3" fill="#1A1A1A"/>
+              <!-- 번호판 (빨강) -->
+              <rect x="18" y="28" width="12" height="4" rx="1" fill="#E1480A"/>
+              <!-- 헤드라이트 (노란색) -->
+              <rect x="10" y="26" width="5" height="3" rx="1" fill="#FFF1AC"/>
+              <rect x="33" y="26" width="5" height="3" rx="1" fill="#FFF1AC"/>
+              <!-- 바퀴 -->
+              <circle cx="15" cy="34" r="3.5" fill="#1A1A1A"/>
+              <circle cx="33" cy="34" r="3.5" fill="#1A1A1A"/>
+              <circle cx="15" cy="34" r="1.5" fill="#888"/>
+              <circle cx="33" cy="34" r="1.5" fill="#888"/>
             </svg>
           </div>
           <div class="card-info">
             <h3 class="card-title">방문 차량</h3>
-            <p class="card-desc">방문 차량을 등록하세요</p>
+            <p class="card-desc">주차 등록·차량 확인</p>
           </div>
         </div>
 
@@ -344,16 +363,28 @@ function nextEvent() {
       <div class="feature-card" :class="{ expanded: active === 'booking' }">
         <div class="card-top">
           <div class="icon-circle">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-              <line x1="16" y1="2" x2="16" y2="6"/>
-              <line x1="8" y1="2" x2="8" y2="6"/>
-              <line x1="3" y1="10" x2="21" y2="10"/>
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+              <!-- 노란 건물 (뒤) -->
+              <rect x="4" y="12" width="20" height="28" rx="2" fill="#FFC21C"/>
+              <rect x="8" y="16" width="5" height="4" rx="1" fill="#FFD45F"/>
+              <rect x="15" y="16" width="5" height="4" rx="1" fill="#FFD45F"/>
+              <rect x="8" y="23" width="5" height="4" rx="1" fill="#FFD45F"/>
+              <rect x="15" y="23" width="5" height="4" rx="1" fill="#FFD45F"/>
+              <!-- 파란 건물 (앞 오른쪽) -->
+              <rect x="20" y="6" width="18" height="34" rx="2" fill="#2882FF"/>
+              <rect x="24" y="10" width="4" height="4" rx="1" fill="#66A6FF"/>
+              <rect x="30" y="10" width="4" height="4" rx="1" fill="#66A6FF"/>
+              <rect x="24" y="17" width="4" height="4" rx="1" fill="#66A6FF"/>
+              <rect x="30" y="17" width="4" height="4" rx="1" fill="#66A6FF"/>
+              <rect x="24" y="24" width="4" height="4" rx="1" fill="#66A6FF"/>
+              <rect x="30" y="24" width="4" height="4" rx="1" fill="#66A6FF"/>
+              <!-- 빨간 지붕 장식 -->
+              <path d="M26 6l3-4 3 4" fill="#FF5151"/>
             </svg>
           </div>
           <div class="card-info">
             <h3 class="card-title">시설 예약</h3>
-            <p class="card-desc">헬스장 · 게스트룸 · 독서실</p>
+            <p class="card-desc">헬스장·게스트룸·회의실</p>
           </div>
         </div>
 
@@ -567,20 +598,20 @@ function nextEvent() {
 }
 .notice-title {
   font-family: var(--font-heading);
-  font-size: calc(22px * var(--font-scale));
+  font-size: calc(24px * var(--font-scale));
   font-weight: 800;
   color: #fff;
   letter-spacing: -1.2px;
-  line-height: 1.1;
+  line-height: 0.92;
 }
 .notice-sub {
   font-family: var(--font-body);
-  font-size: calc(16px * var(--font-scale));
+  font-size: calc(20px * var(--font-scale));
   font-weight: 500;
   color: #fff;
-  letter-spacing: -0.8px;
-  margin-top: 8px;
-  line-height: 1.2;
+  letter-spacing: -1px;
+  margin-top: 12px;
+  line-height: 1;
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -605,15 +636,35 @@ function nextEvent() {
 }
 
 .icon-circle {
-  width: 60px;
-  height: 60px;
-  min-width: 60px;
+  width: 72px;
+  height: 72px;
+  min-width: 72px;
   background: #fff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  position: relative;
+}
+
+.icon-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: #BA1A1A;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  letter-spacing: -0.6px;
 }
 
 .card-info {
@@ -622,19 +673,19 @@ function nextEvent() {
 }
 .card-title {
   font-family: var(--font-heading);
-  font-size: calc(24px * var(--font-scale));
+  font-size: calc(28px * var(--font-scale));
   font-weight: 800;
   color: #111;
   letter-spacing: -1px;
-  line-height: 1.2;
+  line-height: 0.8;
 }
 .card-desc {
   font-family: var(--font-body);
-  font-size: calc(16px * var(--font-scale));
+  font-size: calc(20px * var(--font-scale));
   font-weight: 500;
   color: #666;
   letter-spacing: -0.5px;
-  margin-top: 3px;
+  margin-top: 6px;
 }
 
 /* ── 카드 하단 액션 영역 ── */
@@ -660,14 +711,14 @@ function nextEvent() {
 .action-btn.use {
   background: var(--c-btn-primary);
   color: var(--c-btn-primary-text);
-  font-size: calc(22px * var(--font-scale));
-  padding: 16px;
+  font-size: calc(32px * var(--font-scale));
+  padding: 20px;
 }
 .action-btn.back {
   background: var(--c-btn-primary);
   color: var(--c-btn-primary-text);
-  font-size: calc(22px * var(--font-scale));
-  padding: 16px;
+  font-size: calc(32px * var(--font-scale));
+  padding: 20px;
 }
 .action-btn.back.full {
   margin-top: 12px;
@@ -955,7 +1006,7 @@ function nextEvent() {
   border-radius: var(--btn-radius);
   padding: 20px;
   font-family: var(--font-heading);
-  font-size: calc(22px * var(--font-scale));
+  font-size: calc(32px * var(--font-scale));
   font-weight: 800;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -987,7 +1038,7 @@ function nextEvent() {
 }
 .event-nav-label {
   font-family: var(--font-body);
-  font-size: calc(18px * var(--font-scale));
+  font-size: calc(20px * var(--font-scale));
   font-weight: 500;
   color: #666;
 }
@@ -1002,7 +1053,7 @@ function nextEvent() {
 }
 .event-nav-page {
   font-family: var(--font-body);
-  font-size: calc(20px * var(--font-scale));
+  font-size: calc(24px * var(--font-scale));
   font-weight: 500;
   color: #333;
   min-width: 40px;

@@ -10,11 +10,10 @@ const hasNotif = ref(true)
       <p class="header-location">101동 502호</p>
     </div>
     <button class="notif-btn" @click="hasNotif = false" aria-label="알림">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-      </svg>
-      <span v-if="hasNotif" class="notif-badge" />
+      <span class="notif-text">알림</span>
+      <span v-if="hasNotif" class="notif-badge">
+        <span class="notif-count">1</span>
+      </span>
     </button>
   </header>
 </template>
@@ -64,14 +63,35 @@ const hasNotif = ref(true)
   -webkit-tap-highlight-color: transparent;
 }
 
+.notif-text {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 700;
+  color: #111;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
 .notif-badge {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   background: var(--c-badge-red, #BA1A1A);
   border-radius: 50%;
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 4px;
+  right: 4px;
   border: 2px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notif-count {
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 8px;
+  font-weight: 500;
+  color: #fff;
+  line-height: 1;
+  letter-spacing: -0.4px;
 }
 </style>
